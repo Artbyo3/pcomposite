@@ -1,0 +1,49 @@
+    Checking temp_app v0.1.0 (C:\Users\jorge\OneDrive\Escritorio\pcomposite\src-tauri)
+error[E0428]: the name `greet` is defined multiple times
+ --> src\lib.rs:9:1
+  |
+4 | fn greet(name: &str) -> String {
+  | ------------------------------ previous definition of the value `greet` here
+...
+9 | fn greet(name: &str) -> String {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `greet` redefined here
+  |
+  = note: `greet` must be defined only once in the value namespace of this module
+
+error[E0252]: the name `__cmd__greet` is defined multiple times
+ --> src\lib.rs:9:4
+  |
+4 | fn greet(name: &str) -> String {
+  |    ----- previous import of the macro `__cmd__greet` here
+...
+9 | fn greet(name: &str) -> String {
+  |    ^^^^^ `__cmd__greet` reimported here
+  |
+  = note: `__cmd__greet` must be defined only once in the macro namespace of this module
+help: you can use `as` to change the binding name of the import
+  |
+9 | fn greet as other___cmd__greet(name: &str) -> String {
+  |          +++++++++++++++++++++
+
+error[E0659]: `__cmd__greet` is ambiguous
+  --> src\lib.rs:80:50
+   |
+80 |         .invoke_handler(tauri::generate_handler![greet])
+   |                                                  ^^^^^ ambiguous name
+   |
+   = note: ambiguous because of a conflict between a macro-expanded name and a less macro-expanded name from outer scope during import or macro resolution
+note: `__cmd__greet` could refer to the macro defined here
+  --> src\lib.rs:8:1
+   |
+ 8 | #[tauri::command]
+   | ^^^^^^^^^^^^^^^^^
+note: `__cmd__greet` could also refer to the macro defined here
+  --> src\lib.rs:3:1
+   |
+ 3 | #[tauri::command]
+   | ^^^^^^^^^^^^^^^^^
+   = note: this error originates in the attribute macro `tauri::command` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+Some errors have detailed explanations: E0252, E0428, E0659.
+For more information about an error, try `rustc --explain E0252`.
+error: could not compile `temp_app` (lib) due to 3 previous errors
