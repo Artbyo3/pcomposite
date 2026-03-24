@@ -1,0 +1,32 @@
+# Build artifacts
+dist/
+dist-ssr/
+*.local
+node_modules/
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/gen/
+src-tauri/check_output.txt
+src-tauri/errors.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environments
+.env*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Git ignore file generator
+# (Removed to avoid ignoring the .gitignore itself)
