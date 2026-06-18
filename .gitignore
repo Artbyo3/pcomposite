@@ -1,32 +1,43 @@
-# Build artifacts
-dist/
-dist-ssr/
-*.local
+# Dependencies
 node_modules/
 
-# Tauri build artifacts
+# Build output
+dist/
+dist-ssr/
+
+# Tauri
 src-tauri/target/
 src-tauri/gen/
-src-tauri/check_output.txt
-src-tauri/errors.log
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-Thumbs.db
-
-# Environments
-.env*
+# Environment & secrets
+.env
+.env.*
 !.env.example
 
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.fseventsd
+*.swp
+*.swo
+
 # Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 
-# Git ignore file generator
-# (Removed to avoid ignoring the .gitignore itself)
+# Personal project files
+*.local
+tauri_help.txt
+
+# Blender auto-saves
+*.blend1
+*.blend2
+*.blend[0-9]
+
+# Backup files
+*.bak
+*~
