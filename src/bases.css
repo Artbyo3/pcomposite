@@ -1,0 +1,18 @@
+.base-card {
+    background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:14px;
+    display:flex; flex-direction:column; gap:12px; transition:all .15s; animation:fadeUp .25s both;
+  }
+  .base-card:hover { border-color:var(--border2); background:var(--bg2); }
+  .base-top { display:flex; align-items:flex-start; gap:10px; }
+  .base-icon { width:36px; height:36px; border-radius:5px; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--text3); flex-shrink:0; }
+  .base-info { flex:1; min-width:0; }
+  .base-name { font-size:11px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .base-meta { display:flex; align-items:center; gap:6px; margin-top:4px; }
+  .base-ext { font-size:8px; font-family:'Space Mono',monospace; color:var(--accent); letter-spacing:1px; font-weight:600; }
+  .base-size { font-size:8px; font-family:'Space Mono',monospace; color:var(--text3); }
+  .base-import {
+    width:100%; height:30px; background:var(--bg3); border:1px solid var(--border); border-radius:4px;
+    color:var(--text2); font-family:'Space Mono',monospace; font-size:9px; letter-spacing:1px; font-weight:600;
+    cursor:pointer; transition:all .12s;
+  }
+  .base-import:hover { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }

@@ -1,0 +1,12 @@
+.sbar {
+    height:28px; background:var(--bg2);
+    display:flex; align-items:center; padding:0 16px; gap:14px; flex-shrink:0;
+    position:relative;
+  }
+  .sbar::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:1px;
+    background: linear-gradient(90deg, transparent 0%, var(--border) 15%, var(--border) 85%, transparent 100%);
+  }
+  .si { display:flex; align-items:center; gap:5px; font-size:9px; font-family:'Space Mono',monospace; color:var(--text3); }
+  .sdot { width:5px; height:5px; border-radius:50%; }
+  .ssep { width:1px; height:12px; background: var(--border); opacity:.5; }
