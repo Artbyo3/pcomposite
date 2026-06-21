@@ -27,17 +27,17 @@ function buildExportSection() {
   // Determine which target to show expanded (first or one with changes)
   // We'll default to first target expanded
 
-  let html = '<div id="exportSection" style="margin-bottom:10px">';
-  html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin-bottom:10px">';
-  html += '<span style="font-size:11px">📦</span>';
-  html += '<span style="font-size:8px;font-weight:700;font-family:\'Space Mono\',monospace;letter-spacing:2px;color:var(--text2);flex:1">EXPORTS</span>';
-  html += '<span style="font-size:7px;font-family:\'Space Mono\',monospace;color:var(--text3)">' + exports.length + ' record' + (exports.length !== 1 ? 's' : '') + ' · ' + fbxFiles.length + ' files</span>';
-  html += '<button class="abtn" onclick="addExport()" style="margin:0;padding:4px 12px;height:auto;font-size:9px;background:var(--accent);color:#000;border-color:var(--accent);font-weight:700;">+ New Export</button>';
+  let html = '<div id="exportSection" class="export-section">';
+  html += '<div class="exp-header">';
+  html += '<span class="exp-header-icon">📦</span>';
+  html += '<span class="exp-header-title">EXPORTS</span>';
+  html += '<span class="exp-header-count">' + exports.length + ' record' + (exports.length !== 1 ? 's' : '') + ' · ' + fbxFiles.length + ' files</span>';
+  html += '<button class="exp-header-btn" onclick="addExport()">+ New Export</button>';
   html += '</div>';
 
   if (!exports.length) {
-    html += '<div style="padding:20px;text-align:center;font-size:8px;font-family:\'Space Mono\',monospace;color:var(--text3);letter-spacing:1px;line-height:1.8">No exports recorded yet<br>Click <b style="color:var(--accent)">+ New Export</b> to group your FBX files by avatar</div>';
-    if (unassigned.length) html += '<div style="padding:0 20px 14px;text-align:center;font-size:7px;font-family:\'Space Mono\',monospace;color:var(--text3)">' + unassigned.length + ' unassigned file' + (unassigned.length !== 1 ? 's' : '') + ' below</div>';
+    html += '<div class="exp-empty"><div class="exp-empty-text">No exports recorded yet<br>Click <b style="color:var(--accent)">+ New Export</b> to group your FBX files by avatar</div></div>';
+    if (unassigned.length) html += '<div class="exp-empty-sub" style="padding:0 20px 14px;text-align:center">' + unassigned.length + ' unassigned file' + (unassigned.length !== 1 ? 's' : '') + ' below</div>';
     html += '</div>';
     return html;
   }
@@ -46,35 +46,32 @@ function buildExportSection() {
   html += '<div style="display:flex;flex-direction:column;gap:14px">';
   for (const target of sortedTargets) {
     const items = groups[target].slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    // Find current version: highest version number, or whichever is marked isFinal
     const currentIdx = items.findIndex(x => x.isFinal);
-    const finalIdx = currentIdx >= 0 ? currentIdx : 0; // default to newest if none marked
-    // Group: current (first shown expanded), rest (collapsed)
+    const finalIdx = currentIdx >= 0 ? currentIdx : 0;
     const current = items[finalIdx];
     const others = items.filter((_, i) => i !== finalIdx);
 
     html += '<div class="exp-col">';
-    // Column header
     html += '<div class="exp-col-head" onclick="_toggleExpCollapse(this)">';
-    html += '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">';
     html += '<span class="exp-col-toggle">▾</span>';
+    html += '<div class="exp-col-info">';
     html += '<span class="exp-col-name">' + escapeHTML(target) + '</span>';
-    html += '<span class="exp-badge-final" style="background:var(--green);color:#000">v' + (current.version || items.length) + '</span>';
-    if (current.isFinal) html += '<span style="font-size:6px;padding:1px 4px;border-radius:2px;background:var(--green);color:#000;font-family:\'Space Mono\',monospace;font-weight:700;letter-spacing:1px">CURRENT</span>';
+    html += '<span class="exp-badge">v' + (current.version || items.length) + '</span>';
+    if (current.isFinal) html += '<span class="exp-badge">CURRENT</span>';
     html += '</div>';
-    html += '<span style="font-size:7px;font-family:\'Space Mono\',monospace;color:var(--text3)">' + items.length + ' version' + (items.length !== 1 ? 's' : '') + '</span>';
-    html += '<button class="exp-btn" onclick="event.stopPropagation();deleteExportGroup(\'' + escapeHTML(target).replace(/'/g, "\\'") + '\')" title="Delete all" style="color:var(--red);font-size:8px;">✕</button>';
+    html += '<span class="exp-col-version-count">' + items.length + ' version' + (items.length !== 1 ? 's' : '') + '</span>';
+    html += '<button class="exp-btn danger" onclick="event.stopPropagation();deleteExportGroup(\'' + escapeHTML(target).replace(/'/g, "\\'") + '\')" title="Delete all">✕</button>';
     html += '</div>';
 
-    // Current version card (always visible)
+    // Current version card
     html += '<div class="exp-card" style="' + (current.isFinal ? 'border-left-color:var(--green)' : '') + '">';
     html += '<div class="exp-top">';
     html += '<span class="exp-date">v' + (current.version || items.length) + ' · ' + (current.date || '—') + '</span>';
-    if (current.isFinal) html += '<span class="exp-badge-final" style="background:var(--green);color:#000">CURRENT</span>';
-    html += '<span class="exp-note-tag" style="margin-left:6px">' + (current.note ? escapeHTML(current.note) : '') + '</span>';
-    html += '<div style="margin-left:auto;display:flex;gap:2px">';
+    if (current.isFinal) html += '<span class="exp-badge">CURRENT</span>';
+    html += '<span class="exp-note-tag">' + (current.note ? escapeHTML(current.note) : '') + '</span>';
+    html += '<div class="exp-top-actions">';
     html += '<button class="exp-btn" onclick="toggleFinalExport(' + exports.indexOf(current) + ')" title="' + (current.isFinal ? 'Unmark as current' : 'Mark as current') + '">★</button>';
-    html += '<button class="exp-btn" onclick="deleteExport(' + exports.indexOf(current) + ')" title="Delete" style="color:var(--red)">✕</button>';
+    html += '<button class="exp-btn danger" onclick="deleteExport(' + exports.indexOf(current) + ')" title="Delete">✕</button>';
     html += '</div></div>';
     if (current.fileNames && current.fileNames.length) {
       html += '<div class="exp-files-list">';
@@ -86,7 +83,7 @@ function buildExportSection() {
     }
     html += '</div>';
 
-    // Older versions (collapsible)
+    // Older versions
     if (others.length) {
       html += '<div class="exp-older-wrap">';
       html += '<div class="exp-older-toggle" onclick="_toggleExpOlder(this)"><span>▸</span> ' + others.length + ' older version' + (others.length !== 1 ? 's' : '') + '</div>';
@@ -95,11 +92,11 @@ function buildExportSection() {
         html += '<div class="exp-card exp-old" style="' + (ex.isFinal ? 'border-left-color:var(--green)' : '') + '">';
         html += '<div class="exp-top">';
         html += '<span class="exp-date">v' + (ex.version || '—') + ' · ' + (ex.date || '—') + '</span>';
-        if (ex.isFinal) html += '<span class="exp-badge-final">CURRENT</span>';
-        html += '<span class="exp-note-tag" style="margin-left:6px">' + (ex.note ? escapeHTML(ex.note) : '') + '</span>';
-        html += '<div style="margin-left:auto;display:flex;gap:2px">';
+        if (ex.isFinal) html += '<span class="exp-badge">CURRENT</span>';
+        html += '<span class="exp-note-tag">' + (ex.note ? escapeHTML(ex.note) : '') + '</span>';
+        html += '<div class="exp-top-actions">';
         html += '<button class="exp-btn" onclick="toggleFinalExport(' + exports.indexOf(ex) + ')" title="Mark as current">★</button>';
-        html += '<button class="exp-btn" onclick="deleteExport(' + exports.indexOf(ex) + ')" title="Delete" style="color:var(--red)">✕</button>';
+        html += '<button class="exp-btn danger" onclick="deleteExport(' + exports.indexOf(ex) + ')" title="Delete">✕</button>';
         html += '</div></div>';
         if (ex.fileNames && ex.fileNames.length) {
           html += '<div class="exp-files-list">';

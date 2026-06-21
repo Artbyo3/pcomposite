@@ -6,7 +6,10 @@ A desktop **asset pipeline manager** for 3D avatar creators. Organise, track, an
 
 ## Screenshots
 
-> *(Add screenshots to the `media/` folder and link them here)*
+| | |
+|---|---|
+| ![img1](media/img1.jpg) | ![img2](media/img2.jpg) |
+| ![img3](media/img3.jpg) | |
 
 ## Features
 
