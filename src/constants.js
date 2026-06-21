@@ -5,7 +5,7 @@ export const FOLDERS = [
   { key:'fbx',       icon:'📦',                                                                                               color:'var(--c-fbx)',      desc:'exported meshes',     files:0, size:'-', pct:0, _bytes:0 },
   { key:'pictures',  icon:'📷',                                                                                               color:'var(--c-pictures)', desc:'ref + texture shots', files:0, size:'-', pct:0, _bytes:0 },
   { key:'promo art', icon:'🖼️',                                                                                              color:'var(--c-promo)',    desc:'marketing renders',   files:0, size:'-', pct:0, _bytes:0 },
-  { key:'resonite',  icon:'🎮',                                                                                               color:'var(--c-resonite)', desc:'resonite asset pack', files:0, size:'-', pct:0, _bytes:0 },
+  { key:'resonite',  icon:'<img src="/RSN_Logomark_Color.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',  color:'var(--c-resonite)', desc:'resonite asset pack', files:0, size:'-', pct:0, _bytes:0 },
   { key:'export',    icon:'🚀',                                                                                               color:'var(--c-export)',   desc:'final upload bundle', files:0, size:'-', pct:0, _bytes:0 },
 ];
 
