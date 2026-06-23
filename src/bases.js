@@ -2,16 +2,16 @@ import { escapeHTML, formatBytes } from './helpers.js';
 import { projects, globalSettings } from './state.js';
 import { readDir, copyFile, mkdir, exists } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
-import { saveProject, loadProject } from './data.js';
 import { showToast } from './ui.js';
 import { logAction } from './checklist.js';
-import { selectProject } from './projects.js';
+import { selectProject, saveActiveProject } from './projects.js';
+import { writeBridgeContext } from './bridge.js';
 
 function openBases() {
-  document.getElementById('basesOverlay').style.display = 'flex';
+  document.getElementById('basesOverlay').classList.add('open');
   renderBases();
 }
-function closeBases() { document.getElementById('basesOverlay').style.display = 'none'; }
+function closeBases() { document.getElementById('basesOverlay').classList.remove('open'); }
 
 async function renderBases() {
   const grid = document.getElementById('basesGrid');
@@ -19,16 +19,16 @@ async function renderBases() {
   const bp = globalSettings.bases_path;
   if (!bp) {
     count.textContent = '';
-    grid.innerHTML = `<div style="grid-column:1/-1;padding:60px;text-align:center;font-size:11px;font-family:'Space Mono',monospace;color:var(--text3)">Set your Avatar Bases Path in Settings</div>`;
+    grid.innerHTML = `<div class="base-empty">Set your Avatar Bases Path in Settings</div>`;
     return;
   }
   let entries;
   try { entries = await readDir(bp); }
-  catch { count.textContent = ''; grid.innerHTML = `<div style="grid-column:1/-1;padding:60px;text-align:center;font-size:11px;font-family:'Space Mono',monospace;color:var(--text3)">Could not read bases path</div>`; return; }
+  catch { count.textContent = '';     grid.innerHTML = `<div class="base-empty">Could not read bases path</div>`; return; }
   const files = entries.filter(e => !e.isDirectory);
   count.textContent = files.length + ' file' + (files.length !== 1 ? 's' : '');
   if (!files.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;padding:60px;text-align:center;font-size:11px;font-family:'Space Mono',monospace;color:var(--text3)">No base files found in that folder</div>`;
+    grid.innerHTML = `<div class="base-empty">No base files found in that folder</div>`;
     return;
   }
   grid.innerHTML = files.map((e, i) => {
@@ -47,7 +47,7 @@ async function renderBases() {
           </div>
         </div>
       </div>
-      <button class="base-import" onclick="importBase('${escapeHTML(e.name).replace(/'/g, "\\'")}')">Import →</button>
+      <button class="base-import" onclick="importBase('${escapeHTML(e.name).replace(/'/g, "\\'")}')">Import</button>
     </div>`;
   }).join('');
 }
@@ -67,11 +67,18 @@ async function importBase(fileName) {
   try { await copyFile(srcPath, destPath); }
   catch (e) { showToast('Error: ' + String(e), 'var(--red)'); return; }
 
+  if (!window._importedBases) window._importedBases = [];
+  if (!window._importedBases.includes(fileName)) {
+    window._importedBases.push(fileName);
+  }
+  await saveActiveProject();
+
   logAction('Copied base ' + fileName + ' to blender/', 'ok');
   showToast(fileName + ' ready in blender/ — drag into Blender or File > Import', 'var(--green)');
 
   const idx = projects.indexOf(p);
   if (idx !== -1) await selectProject(idx);
+  await writeBridgeContext();
   closeBases();
 }
 

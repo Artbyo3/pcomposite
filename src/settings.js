@@ -1,10 +1,9 @@
+import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { escapeHTML } from './helpers.js';
-import { globalSettings, setGlobalSettings } from './state.js';
+import { globalSettings } from './state.js';
 import { loadSettings as loadJSONSettings, saveSettings } from './data.js';
 import { showToast } from './ui.js';
-
-// ── SETTINGS ──
 
 async function loadSettings() {
   try {
@@ -24,10 +23,21 @@ async function saveSetting(key, value) {
 
 async function openSettings() {
   await loadSettings();
-  document.getElementById('settingsOverlay').style.display = 'flex';
-  setSettingsSection('general');
+  document.getElementById('settingsOverlay').classList.add('open');
+  renderSettings();
 }
-function closeSettings() { document.getElementById('settingsOverlay').style.display = 'none'; }
+
+function renderSettings() {
+  const sections = ['general','integrations','bases','appearance'];
+  const names = { general:'General', integrations:'App Integrations', bases:'Avatar Bases', appearance:'Appearance' };
+  document.getElementById('setContent').innerHTML =
+    sections.map(s => `<div class="set-section">
+      <div class="set-section-head">${names[s]}</div>
+      ${renderSectionContent(s)}
+    </div>`).join('');
+}
+
+function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
 
 async function pickSettingPath(key, isDir) {
   try {
@@ -36,42 +46,42 @@ async function pickSettingPath(key, isDir) {
   } catch (err) { showToast('Failed to open dialog: ' + err, 'var(--red)'); }
 }
 
-function setSettingsSection(section) {
-  document.querySelectorAll('.set-nav-item').forEach(el => el.classList.remove('active'));
-  const navItem = document.querySelector(`.set-nav-item[data-section="${section}"]`);
-  if (navItem) navItem.classList.add('active');
-  const content = document.getElementById('setContent');
-  content.innerHTML = renderSettingsSection(section);
+function makeField(key, cfg) {
+  return `<div class="fg">
+    <label class="fl">${cfg.label}</label>
+    <div class="set-path-row">
+      <input id="set_${key}" readonly class="fi" placeholder="${cfg.placeholder}" value="${escapeHTML(globalSettings[key] || '')}" />
+      <button onclick="pickSettingPath('${key}',${cfg.isDir})" class="set-browse" title="Browse"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
+    </div>
+  </div>`;
 }
 
-function renderSettingsSection(section) {
+function renderSectionContent(section) {
   const paths = {
-    root_path: { label: 'Root Projects Path', placeholder: 'Not set — click 📁 to browse', isDir: true },
+    root_path: { label: 'Vault Path', placeholder: 'Not set — click folder to browse', isDir: true },
     blender_path: { label: 'Blender Executable', placeholder: 'Not set', isDir: false },
     painter_path: { label: 'Substance Painter Executable', placeholder: 'Not set', isDir: false },
     unity_path: { label: 'Unity Executable', placeholder: 'Not set', isDir: false },
   };
-  const makeField = (key, cfg) => `
-    <div class="set-field">
-      <label class="set-label">${cfg.label}</label>
-      <div style="display:flex;gap:6px;">
-        <input id="set_${key}" readonly class="set-input" placeholder="${cfg.placeholder}" value="${escapeHTML(globalSettings[key] || '')}" />
-        <button onclick="pickSettingPath('${key}',${cfg.isDir})" class="set-browse" title="Browse">📁</button>
-      </div>
-    </div>`;
 
   if (section === 'general') {
-    return makeField('root_path', paths.root_path);
+    return `<div class="set-group">
+      <div class="set-group-title">Vault</div>
+      ${makeField('root_path', paths.root_path)}
+    </div>`;
   }
+
   if (section === 'integrations') {
     const apps = ['blender', 'painter', 'unity'];
     const appIcons = {
-      blender: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>',
-      painter: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>',
-      unity: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 22 7 22 17 12 22 2 17 2 7 12 2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="7" x2="22" y2="7"/><line x1="2" y1="17" x2="22" y2="17"/></svg>',
+      blender: '<img src="/blender.svg" width="16" height="16" />',
+      painter: '<img src="/substance-3d-painter.svg" width="16" height="16" />',
+      unity: '<img src="/Unity.svg" width="16" height="16" />',
     };
     const appNames = { blender: 'Blender', painter: 'Substance Painter', unity: 'Unity Editor' };
-    return `<div class="set-intro">Configure which apps PCOMPOSITE integrates with</div>
+    return `<div class="set-group">
+      <div class="set-group-title">App Integrations</div>
+      <div class="set-group-desc">Configure which apps PCOMPOSITE integrates with</div>
       <div class="app-cards">
         ${apps.map(key => {
           const pathKey = key + '_path';
@@ -80,44 +90,87 @@ function renderSettingsSection(section) {
           return `<div class="app-card">
             <div class="app-card-head">
               <span class="app-card-icon">${appIcons[key]}</span>
-              <div>
+              <div style="flex:1">
                 <div class="app-card-name">${appNames[key]}</div>
                 <span class="app-card-status ${connected ? 'on' : ''}">${connected ? 'CONNECTED' : 'NOT SET'}</span>
               </div>
             </div>
             <div class="app-card-body">
-              <div style="display:flex;gap:6px;">
-                <input id="set_${pathKey}" readonly class="set-input" placeholder="Not set" value="${escapeHTML(val)}" />
-                <button onclick="pickSettingPath('${pathKey}',false)" class="set-browse" title="Browse">📁</button>
+              <div class="set-path-row">
+                <input id="set_${pathKey}" readonly class="fi" placeholder="Not set" value="${escapeHTML(val)}" />
+                <button onclick="pickSettingPath('${pathKey}',false)" class="set-browse" title="Browse"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
               </div>
-              ${key === 'blender' ? `
-                <div class="addon-box">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
-                  <div>
-                    <div style="font-size:8px;font-weight:700;letter-spacing:1px;font-family:'Space Mono',monospace;color:var(--text2)">Blender Addon</div>
-                    <div style="font-size:7px;font-family:'Space Mono',monospace;color:var(--text3);margin-top:2px">Import bases directly into your open Blender session</div>
-                  </div>
-                  <button disabled style="margin-left:auto;height:24px;padding:0 10px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;color:var(--text3);font-size:7px;font-family:'Space Mono',monospace;cursor:default;opacity:.5">Coming soon</button>
+                ${key === 'blender' ? `
+                  <div class="addon-box" onmousedown="dragStart(event)" onmousemove="dragMove(event)" onmouseup="dragEnd(event)">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+                  <div class="addon-title">Blender Addon</div>
+                  <div class="addon-sub">Drag this card into Blender to install</div>
                 </div>` : ''}
             </div>
           </div>`;
         }).join('')}
-      </div>`;
+      </div>
+    </div>`;
   }
+
   if (section === 'bases') {
-    return `<div class="set-field">
-        <label class="set-label">Avatar Bases Path</label>
-        <div style="display:flex;gap:6px;">
-          <input id="set_bases_path" readonly class="set-input" placeholder="Not set — folder with your base files" value="${escapeHTML(globalSettings.bases_path || '')}" />
-          <button onclick="pickSettingPath('bases_path',true)" class="set-browse" title="Browse">📁</button>
-        </div>
-        ${globalSettings.bases_path ? `<div style="margin-top:6px;font-size:7px;font-family:'Space Mono',monospace;color:var(--text3)">Bases loaded from: <span style="color:var(--accent)">${escapeHTML(globalSettings.bases_path)}</span></div>` : ''}
-      </div>`;
+    return `<div class="set-group">
+      <div class="set-group-title">Avatar Bases Path</div>
+      ${makeField('bases_path', { label: 'Folder with your base files', placeholder: 'Not set', isDir: true })}
+      ${globalSettings.bases_path ? `<div class="set-path-info">Bases loaded from: <span>${escapeHTML(globalSettings.bases_path)}</span></div>` : ''}
+    </div>`;
   }
+
   if (section === 'appearance') {
-    return '<div style="padding:40px 20px;text-align:center;font-size:8px;font-family:\'Space Mono\',monospace;color:var(--text3);letter-spacing:1px">Appearance settings coming soon</div>';
+    return `<div class="set-group">
+      <div class="set-group-title">Theme</div>
+      <div class="set-empty">Appearance settings coming soon</div>
+    </div>`;
   }
+
   return '';
 }
 
-export { loadSettings, saveSetting, openSettings, closeSettings, setSettingsSection, pickSettingPath };
+let dragState = null;
+let dragClone = null;
+
+window.dragStart = function(e) {
+  if (e.target.closest('.set-btn, span')) return;
+  dragState = { startX: e.screenX, startY: e.screenY, triggered: false };
+};
+
+window.dragMove = async function(e) {
+  if (dragClone) {
+    dragClone.style.left = (e.clientX - 100) + 'px';
+    dragClone.style.top = (e.clientY - 48) + 'px';
+  }
+  if (!dragState || dragState.triggered) return;
+  const dx = e.screenX - dragState.startX;
+  const dy = e.screenY - dragState.startY;
+  if (dx * dx + dy * dy > 100) {
+    dragState.triggered = true;
+
+    const clone = document.createElement('div');
+    clone.className = 'addon-box drag-clone';
+    clone.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><div class="addon-title">BLENDER ADDON</div><div class="addon-sub">Drop on Blender to install</div>';
+    clone.style.left = (e.clientX - 100) + 'px';
+    clone.style.top = (e.clientY - 48) + 'px';
+    document.body.appendChild(clone);
+    dragClone = clone;
+
+    try {
+      await invoke('drag_addon');
+    } catch (err) {
+      showToast('Drag failed: ' + err, 'var(--red)');
+    } finally {
+      if (dragClone) { dragClone.remove(); dragClone = null; }
+    }
+  }
+};
+
+window.dragEnd = function() {
+  if (dragClone) { dragClone.remove(); dragClone = null; }
+  dragState = null;
+};
+
+export { loadSettings, openSettings, closeSettings, pickSettingPath };

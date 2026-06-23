@@ -1,8 +1,24 @@
+use tauri::Manager;
+
+#[cfg(target_os = "windows")]
+mod drag;
+
+#[cfg(target_os = "windows")]
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+fn drag_addon(app: tauri::AppHandle) -> Result<(), String> {
+    let hwnd = app
+        .get_webview_window("main")
+        .ok_or("main window not found")?
+        .hwnd()
+        .map_err(|e: tauri::Error| e.to_string())?;
+    drag::drag_addon(hwnd.0)
 }
 
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn drag_addon() -> Result<(), String> {
+    Err("Drag-and-drop is only supported on Windows".to_string())
+}
 #[tauri::command]
 fn open_in_app(exe_path: String, file_path: String) -> Result<(), String> {
     std::process::Command::new(exe_path)
@@ -37,7 +53,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, open_in_app, run_command, spawn_command])
+        .invoke_handler(tauri::generate_handler![open_in_app, run_command, spawn_command, drag_addon])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

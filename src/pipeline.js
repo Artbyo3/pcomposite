@@ -1,6 +1,5 @@
 import { PIPELINE } from './constants.js';
-import { projects, globalSettings } from './state.js';
-import { saveProject } from './data.js';
+import { projects } from './state.js';
 import { saveActiveProject } from './projects.js';
 import { refreshInfoPanel } from './ui.js';
 

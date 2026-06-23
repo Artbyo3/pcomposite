@@ -1,7 +1,6 @@
 export let ALL_FILES = [];
 export let sessionNote = '';
 export let projectLog = [];
-export let _noteSaveTimer = null;
 export let currentFolder = null;
 export let fileView = 'list';
 export let ctxEl = null;

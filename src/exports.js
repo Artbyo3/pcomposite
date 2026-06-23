@@ -1,11 +1,10 @@
 import { escapeHTML } from './helpers.js';
-import { FOLDERS, FOLDER_META } from './constants.js';
-import { ALL_FILES, setAllFiles, globalSettings, projects } from './state.js';
-import { saveProject, loadProject } from './data.js';
+import { ALL_FILES, globalSettings } from './state.js';
 import { readDir } from '@tauri-apps/plugin-fs';
 import { showToast } from './ui.js';
 import { saveActiveProject } from './projects.js';
 import { renderFileList } from './files.js';
+import { writeBridgeContext } from './bridge.js';
 
 // ── EXPORTS MANAGEMENT (integrated into export/ folder view) ──
 function buildExportSection() {
@@ -144,11 +143,6 @@ function _toggleExpOlder(el) {
   }
 }
 
-function renderExports() {
-  const sec = document.getElementById('exportSection');
-  if (sec) sec.outerHTML = buildExportSection();
-}
-
 async function addExport() {
   const exports = window._currentExports || [];
   const basesPath = globalSettings.bases_path;
@@ -193,45 +187,54 @@ async function addExport() {
   ).join('');
 
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:flex;align-items:center;justify-content:center;';
+  overlay.className = 'ov ov-modal';
+  overlay.style.zIndex = '500';
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   const escHandler = e => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escHandler); } };
   document.addEventListener('keydown', escHandler);
 
   // Show bases hint if bases_path is not set
   const basesHint = !basesPath
-    ? '<div style="font-size:7px;font-family:\'Space Mono\',monospace;color:var(--orange);padding:4px 0">Set <b>Avatar Bases Path</b> in Settings to populate the dropdown</div>'
-    : (hasDirBases ? '<div style="font-size:7px;font-family:\'Space Mono\',monospace;color:var(--text3);padding:4px 0">' + bases.length + ' base' + (bases.length !== 1 ? 's' : '') + ' found</div>' : '');
+    ? '<div class="modal-hint" style="color:var(--orange)">Set <b>Avatar Bases Path</b> in Settings to populate the dropdown</div>'
+    : (hasDirBases ? '<div class="modal-hint" style="color:var(--text3)">' + bases.length + ' base' + (bases.length !== 1 ? 's' : '') + ' found</div>' : '');
 
   // Auto-version: compute next version for default target
   const defaultTarget = bases.length ? bases[0] : (existingTargets.length === 1 ? existingTargets[0] : '');
   const nextVer = defaultTarget ? getNextVersion(exports, defaultTarget) : 1;
 
-  overlay.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;width:380px;padding:20px;display:flex;flex-direction:column;gap:10px;animation:fadeUp .15s ease;max-height:90vh;overflow-y:auto">'
-    + '<div style="font-size:12px;font-weight:700">New Export</div>'
+  overlay.innerHTML = '<div class="modal-box modal-box-sm">'
+    + '<div class="modal-hd">'
+    + '<span class="modal-title">New Export</span>'
     + basesHint
-    + '<label style="font-size:7px;font-family:\'Space Mono\',monospace;letter-spacing:1px;color:var(--text3)">TARGET BASE</label>'
+    + '</div>'
+    + '<div class="modal-bd">'
+    + '<div class="fg">'
+    + '<label class="fl">TARGET BASE</label>'
     + (hasDirBases
-      ? '<select id="_expTarget" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px;color:var(--text);font-size:11px;outline:none">' + baseOptions + '</select>'
-      : '<input id="_expTarget" list="_expTargets" placeholder="Type base name (e.g. Base Male)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px;color:var(--text);font-size:11px;outline:none" value="' + (defaultTarget ? escapeHTML(defaultTarget).replace(/"/g, '&quot;') : '') + '">'
+      ? '<select id="_expTarget" class="fi">' + baseOptions + '</select>'
+      : '<input id="_expTarget" list="_expTargets" class="fi" placeholder="Type base name (e.g. Base Male)" value="' + (defaultTarget ? escapeHTML(defaultTarget).replace(/"/g, '&quot;') : '') + '">'
       + (existingTargets.length ? '<datalist id="_expTargets">' + baseOptions + '</datalist>' : '')
     )
-    + '<div style="display:flex;gap:6px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 10px">'
-    + '<span style="font-size:7px;font-family:\'Space Mono\',monospace;letter-spacing:1px;color:var(--text3)">VERSION</span>'
-    + '<span id="_expVerPreview" style="font-size:14px;font-weight:700;color:var(--accent)">' + nextVer + '</span>'
     + '</div>'
-    + '<input id="_expNote" placeholder="Note (e.g. final cleanup)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px;color:var(--text);font-size:11px;outline:none">'
-    + '<input id="_expDate" type="date" value="' + new Date().toISOString().slice(0, 10) + '" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 10px;color:var(--text);font-size:11px;outline:none">'
-    + (available.length ? '<div style="border-top:1px solid var(--border);padding-top:6px"><div style="font-size:7px;font-family:\'Space Mono\',monospace;letter-spacing:1px;color:var(--text3);margin-bottom:4px">INCLUDE FBX FILES</div>' + fileCheckboxes + '</div>' : '<div style="border-top:1px solid var(--border);padding-top:6px;font-size:8px;color:var(--text3);text-align:center;font-family:\'Space Mono\',monospace">All FBX files are already assigned to exports</div>')
-    + '<div style="display:flex;gap:6px">'
-    + '<label style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2);cursor:pointer"><input id="_expFinal" type="checkbox"> Mark as current</label>'
+    + '<div class="fg vp-box">'
+    + '<span class="vp-label">VERSION</span>'
+    + '<span id="_expVerPreview" class="vp-value">' + nextVer + '</span>'
     + '</div>'
-    + '<div style="display:flex;gap:6px;margin-top:4px">'
-    + '<button onclick="this.closest(\'div[style*=\"position:fixed\"]\').remove()" style="flex:1;height:30px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text2);cursor:pointer;font-size:10px;font-weight:600">Cancel</button>'
-    + '<button onclick="saveExport(this)" style="flex:1;height:30px;background:var(--accent);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700">Save</button>'
+    + '<div class="fg"><input id="_expNote" class="fi" placeholder="Note (e.g. final cleanup)"></div>'
+    + '<div class="fg"><input id="_expDate" type="date" class="fi" value="' + new Date().toISOString().slice(0, 10) + '"></div>'
+    + (available.length
+      ? '<div class="fg exp-modal-section"><label class="fl">INCLUDE FBX FILES</label>' + fileCheckboxes + '</div>'
+      : '<div class="fg exp-modal-section"><div class="exp-modal-empty">All FBX files are already assigned to exports</div></div>'
+    )
+    + '<div class="fg"><label class="exp-modal-label"><input id="_expFinal" type="checkbox"> Mark as current</label></div>'
+    + '</div>'
+    + '<div class="modal-ft">'
+    + '<button onclick="this.closest(\'.ov\').remove()" class="btn-sec">Cancel</button>'
+    + '<button onclick="saveExport(this)" class="btn-pri">Save</button>'
     + '</div></div>';
   document.body.appendChild(overlay);
-  setTimeout(() => document.getElementById('_expTarget')?.focus(), 100);
+  requestAnimationFrame(() => overlay.classList.add('open'));
+  setTimeout(() => document.getElementById('_expTarget')?.focus(), 200);
 
   // Update version preview when target changes
   const targetInput = document.getElementById('_expTarget');
@@ -255,7 +258,7 @@ function getNextVersion(exports, target) {
 }
 
 function saveExport(btn) {
-  const overlay = btn.closest('div[style*="position:fixed"]');
+  const overlay = btn.closest('.ov');
   const targetEl = document.getElementById('_expTarget');
   const target = targetEl?.value?.trim();
   const note = document.getElementById('_expNote')?.value?.trim();
@@ -288,6 +291,7 @@ function saveExport(btn) {
   overlay?.remove();
   saveActiveProject();
   renderFileList('fbx');
+  writeBridgeContext();
   showToast('Export v' + version + ' logged for ' + target, 'var(--green)');
 }
 
@@ -303,6 +307,7 @@ function toggleFinalExport(idx) {
   }
   saveActiveProject();
   renderFileList('fbx');
+  writeBridgeContext();
 }
 
 function deleteExport(idx) {
@@ -311,6 +316,7 @@ function deleteExport(idx) {
   window._currentExports = exports;
   saveActiveProject();
   renderFileList('fbx');
+  writeBridgeContext();
 }
 
 function deleteExportGroup(target) {
@@ -318,6 +324,7 @@ function deleteExportGroup(target) {
   window._currentExports = exports.filter(e => e.target !== target);
   saveActiveProject();
   renderFileList('fbx');
+  writeBridgeContext();
 }
 
-export { buildExportSection, renderExports, addExport, saveExport, toggleFinalExport, deleteExport, deleteExportGroup, getNextVersion, _toggleExpCollapse, _toggleExpOlder };
+export { buildExportSection, addExport, saveExport, toggleFinalExport, deleteExport, deleteExportGroup, _toggleExpCollapse, _toggleExpOlder };

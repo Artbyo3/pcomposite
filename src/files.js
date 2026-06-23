@@ -1,10 +1,10 @@
-import { escapeHTML, formatBytes, isViewableImage, loadThumbnail } from './helpers.js';
-import { FOLDERS, FOLDER_META, APP_ICONS } from './constants.js';
+import { escapeHTML, isViewableImage, loadThumbnail } from './helpers.js';
+import { FOLDERS, APP_ICONS } from './constants.js';
 import { ALL_FILES, currentFolder, fileView, setCurrentFolder, setFileView as setFileViewState, ctxEl, setCtxEl, projects, globalSettings } from './state.js';
-import { join, basename, extname } from '@tauri-apps/api/path';
+import { join } from '@tauri-apps/api/path';
 import { invoke } from '@tauri-apps/api/core';
 import { openPath } from '@tauri-apps/plugin-opener';
-import { stat, mkdir, exists, rename, copyFile, remove, readFile } from '@tauri-apps/plugin-fs';
+import { mkdir, exists, readFile } from '@tauri-apps/plugin-fs';
 import { buildExportSection } from './exports.js';
 import { setVTab, showToast, refreshInfoPanel } from './ui.js';
 import { logAction } from './checklist.js';
@@ -308,4 +308,4 @@ function showCtx(e, idx) {
 }
 function removeCtx() { if (ctxEl) { ctxEl.remove(); setCtxEl(null); } }
 
-export { renderFileList, loadVisibleThumbnails, setFileView, goBackFolders, createBlendFile, openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile, showCtx, removeCtx }
+export { renderFileList, setFileView, goBackFolders, createBlendFile, openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile, showCtx, removeCtx }

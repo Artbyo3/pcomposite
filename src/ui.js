@@ -1,12 +1,11 @@
-import { escapeHTML, formatBytes } from './helpers.js';
-import { FOLDERS, FOLDER_META, PIPELINE, CHECKLIST } from './constants.js';
-import { ALL_FILES, setAllFiles, projects, setProjects, sessionNote, projectLog, setProjectLog, globalSettings, currentSort, setCurrentSort, activeFilters, currentFolder } from './state.js';
+import { formatBytes } from './helpers.js';
+import { FOLDERS, PIPELINE, CHECKLIST } from './constants.js';
+import { ALL_FILES, projects, globalSettings, setCurrentSort, activeFilters, currentFolder } from './state.js';
 import { join, basename, extname } from '@tauri-apps/api/path';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { copyFile, stat, mkdir, exists, rename, remove, readDir } from '@tauri-apps/plugin-fs';
-import { invoke } from '@tauri-apps/api/core';
 import { loadProject, saveProject } from './data.js';
-import { loadProjects, renderProjects, selectProject, saveActiveProject } from './projects.js';
+import { loadProjects, renderProjects, selectProject } from './projects.js';
 import { renderFileList } from './files.js';
 import { renderChecklist, renderLog, logAction } from './checklist.js';
 
@@ -267,4 +266,4 @@ function destFolderForExt(lowerExt) {
   return 'export';
 }
 
-export { showToast, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop, handleDroppedFiles, collectFilesRecursive, destFolderForExt }
+export { showToast, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop }

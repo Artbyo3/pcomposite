@@ -61,7 +61,10 @@
   .cal-item-no-thumb { width:18px; height:18px; border-radius:3px; background:var(--bg3); display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; }
   .cal-day .gal-cal-item { display:inline-flex; align-items:center; gap:4px; padding:2px 5px; border-radius:3px; border:1px solid var(--border); max-width:100%; }
   .cal-day .gal-cal-item:hover { background:var(--accent-dim); color:var(--accent); border-color:var(--accent); }
-  #galleryGrid { background:var(--bg); }
+  .g-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px; align-content: start; background: var(--bg);
+  }
   .us-section { margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
   .us-head { display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
   .us-head-label { font-size:9px; font-family:'Space Mono',monospace; color:var(--text3); letter-spacing:2px; font-weight:600; }

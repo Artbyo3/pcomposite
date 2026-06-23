@@ -1,41 +1,122 @@
-.set-nav-item {
-    display:flex; align-items:center; gap:8px; padding:8px 18px; font-size:10px; color:var(--text3);
-    cursor:pointer; transition:all .12s; border-right:2px solid transparent; font-weight:500;
-  }
-  .set-nav-item:hover { color:var(--text2); background:var(--accent-dim); }
-  .set-nav-item.active { color:var(--accent); border-right-color:var(--accent); background:var(--accent-dim); }
-  .set-field { margin-bottom:14px; }
-  .set-label {
-    font-size:8px; letter-spacing:2px; text-transform:uppercase; font-family:'Space Mono',monospace;
-    color:var(--text3); margin-bottom:6px; display:block;
-  }
-  .set-input {
-    flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:5px; padding:8px 11px;
-    color:var(--text); font-family:'Space Mono',monospace; font-size:11px; outline:none;
-  }
-  .set-browse {
-    width:34px; background:var(--bg3); border:1px solid var(--border); border-radius:5px;
-    cursor:pointer; color:var(--text2); display:flex; align-items:center; justify-content:center; transition:all .12s;
-  }
-  .set-browse:hover { border-color:var(--accent); color:var(--accent); }
-  .set-intro { font-size:9px; color:var(--text3); margin-bottom:14px; }
-  .app-cards { display:flex; flex-direction:column; gap:12px; }
-  .app-card {
-    background:var(--bg); border:1px solid var(--border); border-radius:6px; overflow:hidden;
-  }
-  .app-card-head {
-    display:flex; align-items:center; gap:10px; padding:12px 14px;
-    border-bottom:1px solid var(--border); background:var(--bg2);
-  }
-  .app-card-icon { width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:var(--bg3); border-radius:6px; color:var(--text2); flex-shrink:0; }
-  .app-card-name { font-size:12px; font-weight:700; }
-  .app-card-status {
-    font-size:6px; font-family:'Space Mono',monospace; letter-spacing:1px; padding:1px 5px;
-    border-radius:3px; background:rgba(255,100,50,0.12); color:#ff6432; font-weight:600;
-  }
-  .app-card-status.on { background:rgba(0,200,80,0.12); color:var(--green); }
-  .app-card-body { padding:12px 14px; }
-  .addon-box {
-    display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px 12px;
-    background:var(--bg3); border:1px solid var(--border); border-radius:5px;
-  }
+/* ── SCROLLBAR ── */
+#setContent::-webkit-scrollbar { width:4px; }
+#setContent::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+/* ── SECTIONS ── */
+.set-section { margin-bottom:32px; }
+.set-section:last-child { margin-bottom:0; }
+.set-section-head {
+  position:relative;
+  font-size:11px; letter-spacing:3px; text-transform:uppercase;
+  font-family:'Space Mono',monospace; color:var(--text2);
+  padding-bottom:10px; margin-bottom:16px;
+}
+.set-section-head::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent 0%, var(--border) 15%, var(--border) 85%, transparent 100%);
+}
+
+/* ── GROUPS (control containers) ── */
+.set-group {
+  background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:16px;
+}
+.set-group + .set-group { margin-top:10px; }
+.set-group-title {
+  font-size:10px; letter-spacing:2px; text-transform:uppercase;
+  font-family:'Space Mono',monospace; color:var(--text2); margin-bottom:10px;
+}
+.set-group-desc {
+  font-size:10px; color:var(--text2); margin-bottom:10px; line-height:1.5;
+}
+.set-group .fl {
+  font-size:10px; letter-spacing:1.5px; color:var(--text2);
+}
+.set-group .fi::placeholder { color:var(--text2); }
+
+/* ── FILE PATH ROW ── */
+.set-path-row {
+  display:flex; align-items:center; gap:6px;
+}
+.set-path-row .fi[readonly] {
+  background:var(--bg3); border-color:var(--border);
+  font-size:10px; cursor:default;
+}
+.set-path-row .fi[readonly]:focus { border-color:var(--border); }
+
+/* ── BROWSE ── */
+.set-browse {
+  width:34px; height:34px; flex-shrink:0;
+  background:var(--bg3); border:1px solid var(--border); border-radius:6px;
+  cursor:pointer; color:var(--text2); display:flex; align-items:center; justify-content:center; transition:all .12s;
+}
+.set-browse:hover { border-color:var(--accent); color:var(--accent); background:var(--bg); }
+
+/* ── INTEGRATION APP CARDS ── */
+.app-cards { display:flex; flex-direction:column; gap:8px; }
+.app-card {
+  background:var(--bg); border:1px solid var(--border); border-radius:6px; overflow:hidden;
+}
+.app-card-head {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-bottom:1px solid var(--border);
+}
+.app-card-icon {
+  width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+  background:var(--bg3); border-radius:6px; flex-shrink:0;
+}
+.app-card-icon img { display:block; }
+.app-card-name { font-size:11px; font-weight:700; margin-bottom:2px; }
+.app-card-status {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:10px; font-family:'Space Mono',monospace; letter-spacing:.5px;
+  color:#ff6432; font-weight:700;
+}
+.app-card-status::before {
+  content:''; width:6px; height:6px; border-radius:50%;
+  background:#ff6432; flex-shrink:0;
+}
+.app-card-status.on { color:var(--green); }
+.app-card-status.on::before { background:var(--green); }
+.app-card-body { padding:10px 12px; }
+
+/* ── ADDON BOX ── */
+.addon-box {
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  margin-top:8px; padding:18px 16px 14px;
+  background:var(--bg2); border:2px dashed var(--border2); border-radius:12px;
+  text-align:center; transition:border-color .15s, background .15s;
+  text-decoration:none; color:inherit; cursor:grab;
+}
+.addon-box:hover { border-color:var(--accent-dim); background:var(--bg); }
+.addon-box:active { cursor:grabbing; }
+
+.drag-clone {
+  position:fixed; pointer-events:none; z-index:9999; width:180px;
+  margin-top:0;
+}
+.drag-clone .set-btn { display:none; }
+.addon-title {
+  font-size:11px; font-weight:700; letter-spacing:1px;
+  font-family:'Space Mono',monospace; color:var(--text);
+}
+.addon-sub {
+  font-size:10px; font-family:'Space Mono',monospace;
+  color:var(--text2); margin-top:2px;
+}
+.set-btn {
+  display:block; width:100%; padding:8px 0; margin-top:4px;
+  background:var(--bg3); border:1px solid var(--border); border-radius:6px;
+  color:var(--text); font-size:9px; font-family:'Space Mono',monospace; letter-spacing:1px;
+  text-align:center; cursor:pointer; transition:all .12s;
+}
+.set-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--bg); }
+
+/* ── UTILITIES ── */
+.set-path-info {
+  margin-top:8px; font-size:10px; font-family:'Space Mono',monospace; color:var(--text2);
+}
+.set-path-info span { color:var(--accent); }
+.set-empty {
+  padding:16px; text-align:center; font-size:10px;
+  font-family:'Space Mono',monospace; color:var(--text2); letter-spacing:1px;
+}

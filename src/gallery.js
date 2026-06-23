@@ -1,5 +1,5 @@
 import { projects, ALL_FILES, sessionNote, globalSettings, galCalView, setGalCalView, galCalYear, setGalCalYear, galCalMonth, setGalCalMonth, galCalDay, setGalCalDay, _galCalDateTarget, setGalCalDateTarget, galleryFilter, setGalleryFilter as setGalleryFilterState, galleryView, setGalleryView as setGalleryViewState } from './state.js';
-import { escapeHTML, pad2, getDateStr } from './helpers.js';
+import { escapeHTML, getDateStr } from './helpers.js';
 import { FOLDERS, PIPELINE, MONTH_NAMES, DAY_NAMES_SHORT, CHECKLIST } from './constants.js';
 import { saveProject } from './data.js';
 import { showToast } from './ui.js';
@@ -18,8 +18,8 @@ _calDateInput.addEventListener('change', function() {
 });
 document.body.appendChild(_calDateInput);
 
-function openGallery() { document.getElementById('galleryOverlay').style.display = 'flex'; renderGallery(); }
-function closeGallery() { document.getElementById('galleryOverlay').style.display = 'none'; }
+function openGallery() { document.getElementById('galleryOverlay').classList.add('open'); renderGallery(); }
+function closeGallery() { document.getElementById('galleryOverlay').classList.remove('open'); }
 
 function setGalleryFilter(el, val) {
   setGalleryFilterState(val);
@@ -399,4 +399,4 @@ function triggerDatePicker(projectIdx) {
 
 function openFromGallery(idx) { closeGallery(); selectProject(idx); }
 
-export { openGallery, closeGallery, setGalleryFilter, setGalleryView, renderGallery, renderGalleryCalendar, galCalPrev, galCalNext, galCalToday, galCalGoMonth, galCalSetView, galCalSetRelease, galCalSetReleaseFor, triggerDatePicker, saveReleaseDate, openFromGallery, getFilteredProjects, buildDateLookup };
+export { openGallery, closeGallery, setGalleryFilter, setGalleryView, renderGallery, renderGalleryCalendar, galCalPrev, galCalNext, galCalToday, galCalGoMonth, galCalSetView, galCalSetRelease, triggerDatePicker, openFromGallery };

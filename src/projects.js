@@ -1,13 +1,14 @@
 import { join } from '@tauri-apps/api/path';
 import { escapeHTML, formatBytes } from './helpers.js';
 import { FOLDERS, FOLDER_META, PIPELINE, CHECKLIST } from './constants.js';
-import { ALL_FILES, setAllFiles, projects, setProjects, sessionNote, setSessionNote, projectLog, setProjectLog, globalSettings, currentFolder, setCurrentFolder, currentSort, activeFilters } from './state.js';
+import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, currentFolder, setCurrentFolder, currentSort, activeFilters } from './state.js';
 import { loadProject, saveProject, syncProjectFiles, scanVault } from './data.js';
-import { showToast, setVTab, refreshInfoPanel } from './ui.js';
+import { showToast, setVTab } from './ui.js';
 import { updateHeaderThumb } from './thumbnail.js';
 import { setPipe } from './pipeline.js';
 import { refreshFolders } from './folders.js';
 import { logAction } from './checklist.js';
+import { writeBridgeContext } from './bridge.js';
 
 async function saveActiveProject() {
   const p = projects.find(x => x.active);
@@ -23,6 +24,7 @@ async function saveActiveProject() {
     checklist: CHECKLIST.map(c => ({ label: c.l, done: c.done })),
     note: sessionNote,
     exports: window._currentExports || [],
+    imported_bases: window._importedBases || [],
   };
   await saveProject(globalSettings.root_path, data);
 }
@@ -131,6 +133,7 @@ async function selectProject(i) {
         }
       }
       window._currentExports = rawExports;
+      window._importedBases = (data.imported_bases || []).slice();
     }
   } catch (e) { console.error('selectProject load error:', e); showToast('Error loading project: ' + e, 'var(--red)'); }
 
@@ -151,6 +154,7 @@ document.getElementById('crumb').innerHTML    = '<b>' + p.id + '</b> <span style
   await setPipe(Math.max(0, p.stage - 1), true);
   refreshFolders();
   logAction(`Project "${p.name}" opened`, 'info');
+  await writeBridgeContext();
 }
 
 export { loadProjects, renderProjects, selectProject, saveActiveProject };

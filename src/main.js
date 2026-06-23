@@ -8,6 +8,7 @@ import './files.css';
 import './gallery.css';
 import './panel.css';
 import './statusbar.css';
+import './components.css';
 import './modal.css';
 import './settings.css';
 import './exports.css';
@@ -19,7 +20,7 @@ import { initDataStore } from './data.js';
 
 import { projects, globalSettings } from './state.js';
 
-import { loadSettings, openSettings, closeSettings, setSettingsSection, pickSettingPath } from './settings.js';
+import { loadSettings, openSettings, closeSettings, pickSettingPath } from './settings.js';
 import { renderPipeline, setPipe } from './pipeline.js';
 import { refreshFolders, renderFolders, drillFolder } from './folders.js';
 import { saveSessionNote, renderChecklist, toggleCk, logAction, renderLog } from './checklist.js';
@@ -67,6 +68,30 @@ window.copyProjectPath = function() {
   showToast('Project path copied', 'var(--green)');
 };
 
+// ── CHANGELOG ──
+const CHANGELOG = [
+  { ver: 'v0.0.3', date: '', msg: 'Fix: Prevent in-window drop from WebView2 handling' },
+  { ver: 'v0.0.2', date: '', msg: 'Quick Export FBX button, imported bases tracking, addon UI tabs' },
+  { ver: 'v0.0.1', date: '', msg: 'Initial addon bridge: OLE drag-drop, import/export tabs, bridge context' },
+];
+window.toggleChangelog = function(e) {
+  if (e) e.stopPropagation();
+  const card = document.getElementById('changelogCard');
+  if (card.classList.contains('open')) { closeChangelog(); return; }
+  const body = document.getElementById('changelogBody');
+  body.innerHTML = CHANGELOG.map(i =>
+    `<div class="changelog-item"><span class="changelog-ver">${i.ver}</span><span class="changelog-date">${i.date || '—'}</span><span class="changelog-msg">${i.msg}</span></div>`
+  ).join('');
+  card.classList.add('open');
+};
+window.closeChangelog = function(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('changelogCard').classList.remove('open');
+};
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#changelogCard') && !e.target.closest('#versionLabel')) closeChangelog();
+});
+
 // ── EVENT LISTENERS ──
 document.getElementById('imageViewer').addEventListener('click', closeImageViewer);
 document.getElementById('ivClose').addEventListener('click', (e) => { e.stopPropagation(); closeImageViewer(); });
@@ -94,6 +119,6 @@ Object.assign(window, {
   _toggleExpCollapse, _toggleExpOlder,
   triggerThumb, triggerActiveThumb, updateHeaderThumb,
   revealProjectRoot: window.revealProjectRoot, copyProjectPath: window.copyProjectPath, saveActiveProject,
-  openSettings, closeSettings, setSettingsSection, pickSettingPath,
+  openSettings, closeSettings, pickSettingPath,
   closeImageViewer,
 });
