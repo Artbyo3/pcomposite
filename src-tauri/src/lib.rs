@@ -46,6 +46,28 @@ fn spawn_command(exe_path: String, args: Vec<String>) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+#[cfg(target_os = "windows")]
+#[tauri::command]
+fn focus_blender() -> Result<(), String> {
+    extern "system" {
+        fn FindWindowW(lpClassName: *const u16, lpWindowName: *const u16) -> isize;
+        fn SetForegroundWindow(hWnd: isize) -> i32;
+    }
+    let class: Vec<u16> = "Blender\0".encode_utf16().collect();
+    let hwnd = unsafe { FindWindowW(std::ptr::null(), class.as_ptr()) };
+    if hwnd == 0 {
+        return Err("Blender window not found".to_string());
+    }
+    unsafe { SetForegroundWindow(hwnd); }
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn focus_blender() -> Result<(), String> {
+    Err("Focus Blender is only supported on Windows".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -53,7 +75,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![open_in_app, run_command, spawn_command, drag_addon])
+        .invoke_handler(tauri::generate_handler![open_in_app, run_command, spawn_command, drag_addon, focus_blender])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

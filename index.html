@@ -109,7 +109,7 @@
       <div class="vbody" id="vFolders">
         <div class="fgrid" id="fgrid"></div>
         <div class="dzone">
-          <div class="dz-ico">📥</div>
+          <div class="dz-ico"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
           <div class="dz-t">Drop files — PCOMPOSITE sorts them automatically</div>
           <div class="dz-s">.BLEND .SPP .FBX .PNG .MAT .ZIP and more</div>
         </div>
@@ -216,7 +216,7 @@
   <div class="ssep"></div>
   <div class="si" id="sbCnt">0 projects</div>
   <div class="ssep"></div>
-  <div class="si" style="margin-left:auto;cursor:pointer" onclick="toggleChangelog()" id="versionLabel">PCOMPOSITE v0.0.3</div>
+  <div class="si" style="margin-left:auto;cursor:pointer" onclick="toggleChangelog()" id="versionLabel">PCOMPOSITE v0.0.4</div>
   <div id="changelogCard" class="changelog-card">
     <div class="changelog-hd">
       <span>Changelog</span>
@@ -301,13 +301,16 @@
 <!-- AVATAR BASES OVERLAY -->
 <div id="basesOverlay" class="ov ov-fs ov-dark" style="z-index:800;">
   <div class="fs-hd">
-    <span class="fs-hd-title">AVATAR BASES</span>
+    <span id="basesTitle" class="fs-hd-title">BASES LIBRARY</span>
     <span id="basesCount" class="fs-hd-sub"></span>
     <div class="fs-hd-actions">
+      <button id="basesNewGroupBtn" onclick="createGroup()" class="tbtn" style="font-size:9px;padding:4px 10px">+ NEW GROUP</button>
+      <button id="basesAddFilesBtn" onclick="addFilesToDetail()" class="tbtn" style="font-size:9px;padding:4px 10px;display:none">+ ADD FILES</button>
       <button onclick="closeBases()" class="close-btn">✕</button>
     </div>
   </div>
   <div id="basesGrid" class="fs-bd fs-bd-pad bases-grid"></div>
+  <div id="basesDetail" class="fs-bd fs-bd-pad" style="display:none"></div>
 </div>
 
 <!-- IMAGE VIEWER LIGHTBOX -->

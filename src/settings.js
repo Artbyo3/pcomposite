@@ -2,13 +2,23 @@ import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { escapeHTML } from './helpers.js';
 import { globalSettings } from './state.js';
-import { loadSettings as loadJSONSettings, saveSettings } from './data.js';
+import { loadSettings as loadJSONSettings, saveSettings, migrateOldBases, ensureVaultBasesDir } from './data.js';
 import { showToast } from './ui.js';
 
 async function loadSettings() {
   try {
     const data = await loadJSONSettings();
+    // Migrate old bases_path to vault _bases/ if present
+    const oldBases = data.bases_path;
+    delete data.bases_path;
     Object.assign(globalSettings, data);
+    if (oldBases && globalSettings.root_path) {
+      await migrateOldBases(globalSettings.root_path, oldBases);
+    }
+    // Ensure vault _bases/ directory exists
+    if (globalSettings.root_path) {
+      await ensureVaultBasesDir(globalSettings.root_path);
+    }
   } catch (e) { console.error('loadSettings error:', e); }
   Object.keys(globalSettings).forEach(k => { const el = document.getElementById('set_' + k); if (el) el.value = globalSettings[k]; });
 }
@@ -19,6 +29,9 @@ async function saveSetting(key, value) {
   if (el) el.value = value;
   try { await saveSettings(globalSettings); }
   catch (e) { showToast('Error saving setting', 'var(--red)'); }
+  if (key === 'root_path' && value) {
+    await ensureVaultBasesDir(value);
+  }
 }
 
 async function openSettings() {
@@ -28,8 +41,8 @@ async function openSettings() {
 }
 
 function renderSettings() {
-  const sections = ['general','integrations','bases','appearance'];
-  const names = { general:'General', integrations:'App Integrations', bases:'Avatar Bases', appearance:'Appearance' };
+  const sections = ['general','integrations','appearance'];
+  const names = { general:'General', integrations:'App Integrations', appearance:'Appearance' };
   document.getElementById('setContent').innerHTML =
     sections.map(s => `<div class="set-section">
       <div class="set-section-head">${names[s]}</div>
@@ -110,14 +123,6 @@ function renderSectionContent(section) {
           </div>`;
         }).join('')}
       </div>
-    </div>`;
-  }
-
-  if (section === 'bases') {
-    return `<div class="set-group">
-      <div class="set-group-title">Avatar Bases Path</div>
-      ${makeField('bases_path', { label: 'Folder with your base files', placeholder: 'Not set', isDir: true })}
-      ${globalSettings.bases_path ? `<div class="set-path-info">Bases loaded from: <span>${escapeHTML(globalSettings.bases_path)}</span></div>` : ''}
     </div>`;
   }
 

@@ -15,7 +15,7 @@ export let galCalMonth = new Date().getMonth();
 export let galCalDay = new Date().getDate();
 export let _galCalDateTarget = -1;
 export let thumbTargetIdx = null;
-export let globalSettings = { root_path: '', blender_path: '', painter_path: '', unity_path: '', bases_path: '' };
+export let globalSettings = { root_path: '', blender_path: '', painter_path: '', unity_path: '' };
 
 export function setAllFiles(v) { ALL_FILES = v; }
 export function setProjects(v) { projects = v; }

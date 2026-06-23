@@ -1,6 +1,7 @@
 import { escapeHTML } from './helpers.js';
 import { ALL_FILES, globalSettings } from './state.js';
-import { readDir } from '@tauri-apps/plugin-fs';
+import { readDir, exists } from '@tauri-apps/plugin-fs';
+import { join } from '@tauri-apps/api/path';
 import { showToast } from './ui.js';
 import { saveActiveProject } from './projects.js';
 import { renderFileList } from './files.js';
@@ -143,31 +144,23 @@ function _toggleExpOlder(el) {
   }
 }
 
+async function _scanBasesGroups() {
+  if (!globalSettings.root_path) return [];
+  const basesDir = await join(globalSettings.root_path, '_bases');
+  if (!(await exists(basesDir))) return [];
+  const entries = await readDir(basesDir);
+  return entries.filter(e => e.isDirectory).map(e => e.name).sort();
+}
+
 async function addExport() {
   const exports = window._currentExports || [];
-  const basesPath = globalSettings.bases_path;
-  let bases = [];
+  const bases = await _scanBasesGroups();
 
-  // Try to read bases directory for dropdown
-  if (basesPath) {
-    try {
-      const entries = await readDir(basesPath);
-      bases = entries
-        .filter(e => !e.isDirectory && /\.(fbx|blend)$/i.test(e.name))
-        .map(e => e.name.replace(/\.(fbx|blend)$/i, ''))
-        .filter((v, i, a) => a.indexOf(v) === i)
-        .sort();
-    } catch (e) {
-      // Fall back to existing targets
-    }
-  }
-  // Also add existing targets that might not be in the directory
   const existingTargets = [...new Set(exports.map(e => e.target))];
   for (const t of existingTargets) { if (!bases.includes(t)) bases.push(t); }
   bases.sort();
 
-  // If we have bases from the directory, use a proper dropdown; otherwise fall back to datalist
-  const hasDirBases = basesPath && bases.length > 0;
+  const hasDirBases = bases.length > 0;
 
   const baseOptions = bases.map(t =>
     '<option value="' + escapeHTML(t).replace(/"/g, '&quot;') + '">' + escapeHTML(t) + '</option>'
@@ -193,12 +186,10 @@ async function addExport() {
   const escHandler = e => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escHandler); } };
   document.addEventListener('keydown', escHandler);
 
-  // Show bases hint if bases_path is not set
-  const basesHint = !basesPath
-    ? '<div class="modal-hint" style="color:var(--orange)">Set <b>Avatar Bases Path</b> in Settings to populate the dropdown</div>'
-    : (hasDirBases ? '<div class="modal-hint" style="color:var(--text3)">' + bases.length + ' base' + (bases.length !== 1 ? 's' : '') + ' found</div>' : '');
+  const basesHint = !globalSettings.root_path
+    ? '<div class="modal-hint" style="color:var(--orange)">Set a <b>Vault Path</b> in Settings to populate the dropdown</div>'
+    : (hasDirBases ? '<div class="modal-hint" style="color:var(--text3)">' + bases.length + ' base group' + (bases.length !== 1 ? 's' : '') + ' found</div>' : '<div class="modal-hint" style="color:var(--text3)">Add base groups in the Bases Library first</div>');
 
-  // Auto-version: compute next version for default target
   const defaultTarget = bases.length ? bases[0] : (existingTargets.length === 1 ? existingTargets[0] : '');
   const nextVer = defaultTarget ? getNextVersion(exports, defaultTarget) : 1;
 

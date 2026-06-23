@@ -1,5 +1,5 @@
 import { appDataDir, join } from '@tauri-apps/api/path';
-import { readTextFile, writeTextFile, exists, mkdir, readDir, stat } from '@tauri-apps/plugin-fs';
+import { readTextFile, writeTextFile, exists, mkdir, readDir, stat, copyFile } from '@tauri-apps/plugin-fs';
 
 const DIR = 'pcomposite';
 let _base = null;
@@ -78,6 +78,30 @@ export async function saveProject(vaultPath, project) {
   if (!(await exists(dir))) await mkdir(dir, { recursive: true });
   const p = await projectFilePath(vaultPath, project.id, project.name);
   await writeTextFile(p, JSON.stringify(project, null, 2));
+}
+
+export async function ensureVaultBasesDir(vaultPath) {
+  if (!vaultPath) return null;
+  const d = await join(vaultPath, '_bases');
+  if (!(await exists(d))) await mkdir(d, { recursive: true });
+  return d;
+}
+
+export async function migrateOldBases(vaultPath, oldBasesPath) {
+  if (!oldBasesPath || !vaultPath) return;
+  if (!(await exists(oldBasesPath))) return;
+  const baseDir = await ensureVaultBasesDir(vaultPath);
+  const entries = await readDir(oldBasesPath);
+  for (const entry of entries) {
+    if (entry.isDirectory) continue;
+    const src = await join(oldBasesPath, entry.name);
+    const dest = await join(baseDir, entry.name);
+    if (!(await exists(dest))) {
+      try {
+        await copyFile(src, dest);
+      } catch (e) { console.warn('migrateBases: could not copy', entry.name, e); }
+    }
+  }
 }
 
 const FOLDER_APP = { blender:'Blender', subs:'Painter', unity:'Unity', fbx:'Explorer', pictures:'Viewer', 'promo art':'Viewer', resonite:'Explorer', export:'Explorer' };

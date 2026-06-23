@@ -133,7 +133,7 @@ async function selectProject(i) {
         }
       }
       window._currentExports = rawExports;
-      window._importedBases = (data.imported_bases || []).slice();
+      window._importedBases = (data.imported_bases || []).map(i => typeof i === 'string' ? { file: i, group: i.replace(/_[^_]+$/, ''), imported_at: null } : { ...i }).slice();
     }
   } catch (e) { console.error('selectProject load error:', e); showToast('Error loading project: ' + e, 'var(--red)'); }
 
