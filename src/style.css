@@ -24,6 +24,20 @@
     --c-resonite: #fbbf24;
     --c-export: #e8ff47;
   }
+  .theme-pink {
+    --bg: #120c12;
+    --bg2: #181018;
+    --bg3: #201820;
+    --bg4: #2a1c28;
+    --bg5: #342434;
+    --border: #382238;
+    --border2: #4a3048;
+    --accent: #ff6bb5;
+    --accent-dim: rgba(255,107,181,0.08);
+    --text: #f0e4ec;
+    --text2: #a07a90;
+    --text3: #684858;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg); color: var(--text);

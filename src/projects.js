@@ -1,5 +1,5 @@
 import { join } from '@tauri-apps/api/path';
-import { escapeHTML, formatBytes } from './helpers.js';
+import { escapeHTML, formatBytes, sanitizeProjectId, sanitizePath, isStreamerMode } from './helpers.js';
 import { FOLDERS, FOLDER_META, PIPELINE, CHECKLIST } from './constants.js';
 import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, currentFolder, setCurrentFolder, currentSort, activeFilters } from './state.js';
 import { loadProject, saveProject, syncProjectFiles, scanVault } from './data.js';
@@ -137,11 +137,12 @@ async function selectProject(i) {
     }
   } catch (e) { console.error('selectProject load error:', e); showToast('Error loading project: ' + e, 'var(--red)'); }
 
-  const rootLabel = globalSettings.root_path ? globalSettings.root_path.split(/[/\\]/).pop() : '3D_Assets';
-  document.getElementById('phId').textContent   = p.id;
+  const rootLabel = globalSettings.root_path ? (isStreamerMode() ? 'Vault' : globalSettings.root_path.split(/[/\\]/).pop()) : '3D_Assets';
+  const safeId = sanitizeProjectId(p.id, 'Project');
+  document.getElementById('phId').textContent   = safeId;
   document.getElementById('phName').textContent = p.name;
-document.getElementById('crumb').innerHTML    = '<b>' + p.id + '</b> <span style="color:var(--text3)">/ ' + escapeHTML(p.name) + '</span>';
-  document.getElementById('phPath').innerHTML   = `<span class="seg">${escapeHTML(rootLabel)}</span><span style="color:var(--text3)">›</span><span class="seg" style="color:var(--accent)">${p.id} — ${escapeHTML(p.name)}</span>`;
+document.getElementById('crumb').innerHTML    = '<b>' + safeId + '</b> <span style="color:var(--text3)">/ ' + escapeHTML(p.name) + '</span>';
+  document.getElementById('phPath').innerHTML   = `<span class="seg">${escapeHTML(rootLabel)}</span><span style="color:var(--text3)">›</span><span class="seg" style="color:var(--accent)">${safeId} — ${escapeHTML(p.name)}</span>`;
 
   // Reset view state when switching projects
   setCurrentFolder(null);

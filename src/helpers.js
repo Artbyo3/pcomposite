@@ -1,4 +1,5 @@
 import { readFile } from '@tauri-apps/plugin-fs';
+import { globalSettings } from './state.js';
 
 export function escapeHTML(str) {
   if (!str) return '';
@@ -50,3 +51,17 @@ export async function loadThumbnail(path, ext) {
 export function pad2(n) { return String(n).padStart(2,'0'); }
 
 export function getDateStr(y,m,d) { return y + '-' + pad2(m+1) + '-' + pad2(d); }
+
+export function isStreamerMode() { return !!globalSettings.streamer_mode; }
+
+export function sanitizePath(path, label) {
+  if (!path) return '';
+  if (isStreamerMode()) return label || '[redacted]';
+  return path;
+}
+
+export function sanitizeProjectId(id, fallback) {
+  if (!id) return '\u2014';
+  if (isStreamerMode()) return fallback || 'Project';
+  return id;
+}

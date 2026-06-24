@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
-import { escapeHTML } from './helpers.js';
+import { escapeHTML, isStreamerMode, sanitizePath } from './helpers.js';
 import { globalSettings } from './state.js';
 import { loadSettings as loadJSONSettings, saveSettings, migrateOldBases, ensureVaultBasesDir } from './data.js';
 import { showToast } from './ui.js';
@@ -19,8 +19,13 @@ async function loadSettings() {
     if (globalSettings.root_path) {
       await ensureVaultBasesDir(globalSettings.root_path);
     }
+    applyTheme();
   } catch (e) { console.error('loadSettings error:', e); }
   Object.keys(globalSettings).forEach(k => { const el = document.getElementById('set_' + k); if (el) el.value = globalSettings[k]; });
+}
+
+function applyTheme() {
+  document.body.classList.toggle('theme-pink', globalSettings.theme === 'pink');
 }
 
 async function saveSetting(key, value) {
@@ -60,10 +65,11 @@ async function pickSettingPath(key, isDir) {
 }
 
 function makeField(key, cfg) {
+  const display = sanitizePath(globalSettings[key] || '', cfg.label === 'Vault Path' ? '[vault]' : '[path set]');
   return `<div class="fg">
     <label class="fl">${cfg.label}</label>
     <div class="set-path-row">
-      <input id="set_${key}" readonly class="fi" placeholder="${cfg.placeholder}" value="${escapeHTML(globalSettings[key] || '')}" />
+      <input id="set_${key}" readonly class="fi" placeholder="${cfg.placeholder}" value="${escapeHTML(display)}" />
       <button onclick="pickSettingPath('${key}',${cfg.isDir})" class="set-browse" title="Browse"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
     </div>
   </div>`;
@@ -78,9 +84,23 @@ function renderSectionContent(section) {
   };
 
   if (section === 'general') {
+    const smOn = isStreamerMode();
     return `<div class="set-group">
       <div class="set-group-title">Vault</div>
       ${makeField('root_path', paths.root_path)}
+    </div>
+    <div class="set-group">
+      <div class="set-group-title">Privacy</div>
+      <div class="toggle-row">
+        <div style="flex:1;min-width:0">
+          <div class="toggle-label">Streamer Mode</div>
+          <div class="toggle-desc">Hide file paths and project IDs from the UI</div>
+        </div>
+        <div class="toggle-btns">
+          <button class="toggle-btn${smOn ? '' : ' on'}" onclick="toggleStreamerMode()">OFF</button>
+          <button class="toggle-btn${smOn ? ' on' : ''}" onclick="toggleStreamerMode()">ON</button>
+        </div>
+      </div>
     </div>`;
   }
 
@@ -99,6 +119,7 @@ function renderSectionContent(section) {
         ${apps.map(key => {
           const pathKey = key + '_path';
           const val = globalSettings[pathKey] || '';
+          const display = sanitizePath(val, '[path set]');
           const connected = !!val;
           return `<div class="app-card">
             <div class="app-card-head">
@@ -110,7 +131,7 @@ function renderSectionContent(section) {
             </div>
             <div class="app-card-body">
               <div class="set-path-row">
-                <input id="set_${pathKey}" readonly class="fi" placeholder="Not set" value="${escapeHTML(val)}" />
+                <input id="set_${pathKey}" readonly class="fi" placeholder="Not set" value="${escapeHTML(display)}" />
                 <button onclick="pickSettingPath('${pathKey}',false)" class="set-browse" title="Browse"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
               </div>
                 ${key === 'blender' ? `
@@ -127,9 +148,20 @@ function renderSectionContent(section) {
   }
 
   if (section === 'appearance') {
+    const themes = [
+      { id:'dark', label:'Dark', colors:'--text2:#7a7a90;--accent:#e8ff47;--border:var(--border)' },
+      { id:'pink', label:'Pink', colors:'--text2:#a07a90;--accent:#ff6bb5;--border:#382238' },
+    ];
     return `<div class="set-group">
       <div class="set-group-title">Theme</div>
-      <div class="set-empty">Appearance settings coming soon</div>
+      <div class="theme-row">
+        ${themes.map(t => `
+          <div class="theme-card${globalSettings.theme === t.id ? ' active' : ''}" onclick="setTheme('${t.id}')">
+            <div class="theme-preview"><div class="tp-bg" style="${t.colors}"><div class="tp-side"></div><div class="tp-main"><div class="tp-bar"></div><div class="tp-acl" style="background:${t.id === 'dark' ? '#e8ff47' : '#ff6bb5'}"></div></div></div></div>
+            <div class="tcl">${t.label}</div>
+          </div>
+        `).join('')}
+      </div>
     </div>`;
   }
 
@@ -176,6 +208,25 @@ window.dragMove = async function(e) {
 window.dragEnd = function() {
   if (dragClone) { dragClone.remove(); dragClone = null; }
   dragState = null;
+};
+
+window.toggleStreamerMode = async function() {
+  globalSettings.streamer_mode = !globalSettings.streamer_mode;
+  await saveSettings(globalSettings);
+  renderSettings();
+  const { projects } = await import('./state.js');
+  const p = projects.find(x => x.active);
+  if (p) {
+    const { selectProject } = await import('./projects.js');
+    await selectProject(p);
+  }
+};
+
+window.setTheme = async function(theme) {
+  globalSettings.theme = theme;
+  applyTheme();
+  await saveSettings(globalSettings);
+  renderSettings();
 };
 
 export { loadSettings, openSettings, closeSettings, pickSettingPath };

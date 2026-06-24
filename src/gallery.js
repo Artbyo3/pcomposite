@@ -1,5 +1,5 @@
 import { projects, ALL_FILES, sessionNote, globalSettings, galCalView, setGalCalView, galCalYear, setGalCalYear, galCalMonth, setGalCalMonth, galCalDay, setGalCalDay, _galCalDateTarget, setGalCalDateTarget, galleryFilter, setGalleryFilter as setGalleryFilterState, galleryView, setGalleryView as setGalleryViewState } from './state.js';
-import { escapeHTML, getDateStr } from './helpers.js';
+import { escapeHTML, getDateStr, sanitizeProjectId } from './helpers.js';
 import { FOLDERS, PIPELINE, MONTH_NAMES, DAY_NAMES_SHORT, CHECKLIST } from './constants.js';
 import { saveProject } from './data.js';
 import { showToast } from './ui.js';
@@ -108,7 +108,7 @@ function renderGallery() {
         </div>
         <div class="gstage-bar"><div class="gstage-fill" style="width:${pct}%;background:${stageColor}"></div></div>
         <div class="ginfo">
-          <div class="g-id">${p.id}</div>
+          <div class="g-id">${sanitizeProjectId(p.id)}</div>
           <div class="g-name">${escapeHTML(p.name)}</div>
           <div class="g-stage-label" style="background:${stageColor}18;color:${stageColor}">
             <span style="width:5px;height:5px;border-radius:50%;background:${stageColor};display:inline-block"></span> ${stageLabel}
