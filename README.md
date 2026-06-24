@@ -1,6 +1,6 @@
 # PCOMPOSITE
 
-A desktop **asset pipeline manager** for 3D avatar creators. Organise, track, and publish your assets across the full content creation pipeline — from modelling to upload.
+A project dashboard for people who juggle **a lot of 3D projects**. Keeps your files organised, tracks where each project is in the pipeline, and connects to Blender so you can import bases straight from the app.
 
 ---
 
@@ -11,27 +11,27 @@ A desktop **asset pipeline manager** for 3D avatar creators. Organise, track, an
 | ![img1](media/img1.jpg) | ![img2](media/img2.jpg) |
 | ![img3](media/img3.jpg) | |
 
-## Features
+## What it does
 
-- **Project-based workflow** — each project gets its own folder structure (blender, subs, unity, fbx, pictures, promo art, resonite, export) with automatic progress tracking
-- **Pipeline tracker** — a visual 5-step bar (Blender → Painter → Unity → Package → Upload) that moves forward as you complete checklist items
-- **File browser** — browse files per folder or all at once, with thumbnails, list/grid toggle, and one-click open in the right app
-- **Smart drag & drop** — drag files from your file explorer; they are automatically sorted into the correct folder by file type
-- **Checklist + session notes** — a per-project checklist that controls the pipeline, plus auto-saving text notes for each session
-- **Export management** — track FBX export versions by target avatar base, collapse old versions, mark the current one
-- **Gallery** — full-screen overview of all your projects in grid or calendar view, with search and stage filters
-- **Avatar bases** — browse a configured bases folder and import base files directly into the current project
-- **Settings** — configure your projects root path, app executables (Blender, Painter, Unity), and avatar bases location
+- **Project folders on autopilot** — each project gets `blender/`, `subs/`, `unity/`, `fbx/`, `pictures/`, `export/` and whatever else you need. Drop files anywhere and they get sorted into the right folder by type.
+- **Pipeline tracker** — a 5-step bar (Blender → Painter → Unity → Package → Upload) that actually moves when you tick things off the checklist. One glance per project.
+- **File browser** — browse by folder or dump everything into one view with thumbnails. Click to open in the right app.
+- **Bases library** — store character bases (or any reusable assets) in `_bases/` inside your vault. Drag-drop images as cover art, rename groups inline, import into your project directly or send the file to the Blender addon with one click.
+- **Blender addon included** — install the addon from the settings page (drag the card into Blender). The addon reads your bases library and lets you import FBX files from inside Blender. PCOMPOSITE can pre-stage an import and focus Blender for you.
+- **Export versions** — every time you export an FBX, it gets a version number. Old versions collapse away, the current one stays visible.
+- **Gallery** — see all your projects in a grid or calendar, search by name, filter by stage.
+- **Streamer mode** — hides file paths and project IDs from the UI if you're sharing your screen.
+- **Themes** — dark theme or pink theme, your call.
+
+The whole thing runs locally. No accounts, no cloud, no telemetry.
 
 ## Getting Started
 
-1. Download the latest release from the **Releases** page
-2. Launch PCOMPOSITE — you'll see an empty project list
-3. Click **+ NEW** in the titlebar to create your first project
-4. Drag files into the drop zone — they'll be sorted automatically
-5. Use the checklist to track your progress through the pipeline
-
----
+1. Download the latest installer from **Releases**
+2. Launch PCOMPOSITE
+3. Click **Settings → General** and set your **Vault Path** — this is where all your projects live
+4. Create your first project with **+ NEW**
+5. Start dropping files into the drop zone
 
 ## For Developers
 
@@ -43,7 +43,6 @@ A desktop **asset pipeline manager** for 3D avatar creators. Organise, track, an
 | Frontend | Vanilla JavaScript (ES modules) |
 | Bundler | [Vite](https://vitejs.dev) 5.x |
 | CSS | Pure CSS with custom properties |
-| Fonts | [Syne](https://fonts.google.com/specimen/Syne) + [Space Mono](https://fonts.google.com/specimen/Space+Mono) |
 | Storage | JSON files in the OS app data directory |
 
 ### Build & Run
@@ -51,10 +50,11 @@ A desktop **asset pipeline manager** for 3D avatar creators. Organise, track, an
 Requires **Node.js 18+** and the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ```bash
-npm install          # Install dependencies
-npm run dev          # Start Vite dev server (browser preview)
-npm run build        # Build frontend for production
-npm run tauri dev    # Launch the desktop app in dev mode
+npm install
+npm run dev          # Vite dev server (browser preview)
+npm run build        # Frontend production build
+npm run tauri dev    # Desktop app with hot reload
+npm run tauri build  # Production binaries + installer
 ```
 
 ### Project Structure
@@ -62,28 +62,29 @@ npm run tauri dev    # Launch the desktop app in dev mode
 ```
 pcomposite/
 ├── src/                    # Frontend source
-│   ├── main.js             # Entry point, imports, event wiring
-│   ├── state.js            # Shared state
+│   ├── main.js             # Entry point
+│   ├── state.js            # Shared app state
 │   ├── constants.js        # Folder definitions, app icons
 │   ├── helpers.js          # Utility functions
-│   ├── projects.js         # Project CRUD, card rendering
-│   ├── files.js            # File browser (list + grid), thumbnails
+│   ├── projects.js         # Project CRUD
+│   ├── files.js            # File browser
 │   ├── folders.js          # Folder tile grid
-│   ├── ui.js               # Tab switching, modals, panels
+│   ├── ui.js               # Tab switching, overlays
 │   ├── pipeline.js         # Pipeline step logic
 │   ├── checklist.js        # Checklist + session notes
-│   ├── gallery.js          # Gallery overlay
-│   ├── exports.js          # Export version management
-│   ├── bases.js            # Avatar bases browser
+│   ├── gallery.js          # Gallery overview
+│   ├── exports.js          # Export versioning
+│   ├── bases.js            # Bases library browser
 │   ├── settings.js         # Settings overlay
+│   ├── bridge.js           # Blender bridge context writer
 │   ├── thumbnail.js        # Thumbnail generation
-│   └── *.css               # Domain-specific stylesheets
+│   └── *.css               # Per-module stylesheets
 ├── src-tauri/              # Tauri Rust backend
-│   ├── src/lib.rs          # Tauri commands
+│   ├── src/lib.rs          # Commands (focus Blender, drag addon, file ops)
 │   ├── Cargo.toml
 │   └── tauri.conf.json
-├── public/                 # Static assets
-├── media/                  # Screenshots and media
+├── public/                 # Static assets, Blender addon
+├── media/                  # Screenshots
 ├── index.html
 ├── vite.config.js
 └── package.json
