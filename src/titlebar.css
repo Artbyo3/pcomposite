@@ -16,7 +16,6 @@
     content:''; width:1px; height:18px;
     background: linear-gradient(to bottom, var(--border2), transparent 80%);
   }
-  .tdiv { display:none; }
   .tcrumb {
     font-size:11px; color:var(--text3); font-family:'Space Mono',monospace;
     display:flex; align-items:center; gap:6px;

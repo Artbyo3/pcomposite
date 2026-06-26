@@ -1,7 +1,7 @@
 bl_info = {
     "name": "PCOMPOSITE Bridge",
     "author": "PCOMPOSITE",
-    "version": (2, 1),
+    "version": (2, 2),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar > PCOMPOSITE",
     "description": "Import bridge for the PCOMPOSITE bases library",
@@ -12,8 +12,9 @@ import bpy
 import json
 import os
 import platform
+import re
 from datetime import date
-from bpy.props import EnumProperty, StringProperty
+from bpy.props import EnumProperty, IntProperty, StringProperty
 from bpy.types import AddonPreferences, Operator, Panel
 
 ADDON_NAME = __name__.partition(".")[0]
@@ -130,26 +131,75 @@ class PCOM_OT_import_base(Operator):
 
 # ── Export Operators ──
 
-class PCOM_OT_export_base(Operator):
-    bl_idname = "pcom.export_base"
-    bl_label = "Export Base FBX"
-    bl_description = "Open the FBX export dialog with the pre-filled save path"
+def _format_export_name(pattern, project, target, version):
+    """Apply naming pattern and sanitize for filesystem."""
+    name = pattern
+    name = name.replace("{project}", project)
+    name = name.replace("{target}", target)
+    name = name.replace("{version}", str(version))
+    name = name.replace("{date}", date.today().isoformat())
+    name = name.replace(" ", "_")
+    name = re.sub(r'[<>:"/\\|?*]', "", name)
+    return name.strip("_. ") or f"{target}_v{version}"
 
-    filepath: StringProperty(default="", subtype="FILE_PATH", options={"HIDDEN", "SKIP_SAVE"})
+
+class PCOM_OT_export_tracked(Operator):
+    bl_idname = "pcom.export_tracked"
+    bl_label = "Export FBX"
+    bl_description = "Open the FBX export dialog with the pre-filled versioned path and track the export"
+
+    export_path: StringProperty(default="", subtype="FILE_PATH", options={"HIDDEN", "SKIP_SAVE"})
+    target: StringProperty(options={"HIDDEN"})
+    next_version: IntProperty(options={"HIDDEN"})
 
     def execute(self, context):
-        bpy.ops.export_scene.fbx("INVOKE_DEFAULT", filepath=self.filepath)
-        return {"FINISHED"}
+        ver = self.next_version or 1
+        export_dir = os.path.dirname(self.export_path)
+        os.makedirs(export_dir, exist_ok=True)
 
+        self._pre_existing = 0
+        if os.path.exists(self.export_path):
+            self._pre_existing = os.path.getsize(self.export_path)
 
-class PCOM_OT_quick_export(Operator):
-    bl_idname = "pcom.quick_export"
-    bl_label = "Quick Export FBX"
-    bl_description = "Open a standard FBX export dialog"
+        bpy.ops.export_scene.fbx("INVOKE_DEFAULT", filepath=self.export_path)
 
-    def execute(self, context):
-        bpy.ops.export_scene.fbx("INVOKE_DEFAULT")
-        return {"FINISHED"}
+        context.window_manager.modal_handler_add(self)
+        self._timer = context.window_manager.event_timer_add(0.5, window=context.window)
+        self._checks = 0
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context, event):
+        if event.type != "TIMER":
+            return {"PASS_THROUGH"}
+        self._checks += 1
+        if self._checks > 40:
+            context.window_manager.event_timer_remove(self._timer)
+            return {"FINISHED"}
+        if os.path.exists(self.export_path):
+            size = os.path.getsize(self.export_path)
+            if size > self._pre_existing + 100:
+                self._write_pending_export()
+                context.window_manager.event_timer_remove(self._timer)
+                self.report({"INFO"}, f"Exported {os.path.basename(self.export_path)}")
+                return {"FINISHED"}
+        return {"PASS_THROUGH"}
+
+    def _write_pending_export(self):
+        ctx = _load_context() or {}
+        ctx["pending_export"] = {
+            "target": self.target,
+            "version": self.next_version,
+            "date": date.today().isoformat(),
+            "file": os.path.basename(self.export_path),
+        }
+        # Bump local version so addon shows the correct next_version immediately
+        targets = ctx.get("export_targets", [])
+        for t in targets:
+            if t.get("target") == self.target:
+                t["latest_version"] = self.next_version
+                t["next_version"] = self.next_version + 1
+                break
+        _write_context(ctx)
 
 
 # ── Refresh Operator ──
@@ -246,19 +296,28 @@ def _draw_import(layout, ctx):
 def _draw_export(layout, ctx):
     layout.label(text="Export FBX", icon="EXPORT")
     targets = ctx.get("export_targets", [])
+    proj_path = ctx.get("active_project_path", "")
+    proj_name = ctx.get("active_project_name", "")
+    pattern = ctx.get("export_naming_pattern", "{target}_v{version}")
     if targets:
-        proj_path = ctx.get("active_project_path", "")
         for t in targets:
             name = t.get("target", "")
-            ver = t.get("version", 0) + 1
-            fbx_path = os.path.join(proj_path, "fbx", f"{name}_v{ver}.fbx")
-            op = layout.operator("pcom.export_base", text=f"Export \u2013 {name}")
-            op.filepath = fbx_path
-    else:
-        layout.label(text="No export targets configured", icon="DOT")
+            ver = t.get("next_version", 1)
+            display_name = _format_export_name(pattern, proj_name, name, ver) + ".fbx"
+            export_dir = os.path.join(proj_path, "fbx", name)
+            full_path = os.path.join(export_dir, display_name).replace("\\", "/")
 
-    layout.separator()
-    layout.operator("pcom.quick_export", text="Quick Export FBX", icon="EXPORT")
+            box = layout.box()
+            row = box.row()
+            row.label(text=name.upper(), icon="GROUP")
+            row = box.row()
+            row.scale_y = 0.6
+            op = row.operator("pcom.export_tracked", text=display_name)
+            op.export_path = full_path
+            op.target = name
+            op.next_version = ver
+    else:
+        layout.label(text="No targets available", icon="DOT")
 
 
 class PCOM_PT_main_panel(Panel):
@@ -303,8 +362,7 @@ classes = [
     PCOM_AP_addon_preferences,
     PCOM_OT_reset_data_dir,
     PCOM_OT_import_base,
-    PCOM_OT_export_base,
-    PCOM_OT_quick_export,
+    PCOM_OT_export_tracked,
     PCOM_OT_refresh,
     PCOM_PT_main_panel,
 ]

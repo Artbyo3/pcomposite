@@ -5,7 +5,8 @@ import { join } from '@tauri-apps/api/path';
 import { invoke } from '@tauri-apps/api/core';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { mkdir, exists, readFile } from '@tauri-apps/plugin-fs';
-import { buildExportSection } from './exports.js';
+import { buildExportSection, loadExportCovers } from './exports.js';
+import { writeBridgeContext } from './bridge.js';
 import { setVTab, showToast, refreshInfoPanel } from './ui.js';
 import { logAction } from './checklist.js';
 import { selectProject, saveActiveProject } from './projects.js';
@@ -15,9 +16,10 @@ function renderFileList(filterKey) {
   const files  = filterKey ? ALL_FILES.filter(f => f.folder === filterKey) : ALL_FILES;
   const folder = FOLDERS.find(f => f.key === filterKey);
   const cls    = filterKey ? 'no-folder' : 'with-folder';
+  const isFbx  = filterKey === 'fbx';
 
-  const exportSection = filterKey === 'fbx' ? buildExportSection() : '';
-
+  if (isFbx) { writeBridgeContext(); }
+  const exportSection = isFbx ? buildExportSection() : '';
   const toolbar = `
     <div class="file-toolbar">
       <div class="file-breadcrumb">
@@ -33,6 +35,7 @@ function renderFileList(filterKey) {
         <span style="color:var(--text3);font-size:8px;margin-left:4px">— ${files.length} item${files.length !== 1 ? 's' : ''}</span>
       </div>
       <div class="file-toolbar-right">
+        ${isFbx ? '<input id="fileFilter" class="file-filter-input" placeholder="filter files..." oninput="filterFileList(this.value)">' : ''}
         ${filterKey === 'blender' ? `<button class="btn-blend" onclick="createBlendFile()" title="Create a new .blend file">+ New</button>` : ''}
         <div class="view-toggle">
           <button class="vt-btn ${fileView === 'list' ? 'on' : ''}" onclick="setFileView('list')" title="List view">≡</button>
@@ -48,6 +51,7 @@ function renderFileList(filterKey) {
         <div class="file-empty-text">This folder is empty</div>
         <div class="file-empty-sub">Drop files here — PCOMPOSITE sorts them automatically</div>
       </div>`);
+    loadExportCovers();
     return;
   }
 
@@ -75,7 +79,7 @@ function renderFileList(filterKey) {
   const rows = files.map((f, fi) => `
     <div class="frow ${cls}" oncontextmenu="showCtx(event,${indices[fi]})" onclick="this.classList.toggle('sel')">
       <span class="fr-ico">${isViewableImage(f.ext) ? `<img class="fr-thumb" data-idx="${indices[fi]}" src="" style="width:28px;height:28px;object-fit:cover;border-radius:3px;vertical-align:middle;">` : f.icon}</span>
-      <div class="fr-nm-wrap"><span class="fr-nm">${escapeHTML(f.name)}</span>${fileToExport[f.name] ? '<span class="fr-tag">' + escapeHTML(fileToExport[f.name]) + '</span>' : ''}</div>
+      <div class="fr-nm-wrap"><span class="fr-nm">${escapeHTML(f.name)}</span>${fileToExport[f.name] ? '<span class="fr-tag">' + escapeHTML(fileToExport[f.name]) + '</span>' : ''}${f.subfolder ? '<span class="fr-tag" style="background:var(--border2);color:var(--text2)">' + escapeHTML(f.subfolder) + '</span>' : ''}</div>
       <div><span class="fr-ext" style="background:${f.ec}18;color:${f.ec}">${f.ext}</span></div>
       ${!filterKey ? `
         <div class="fr-fldr">
@@ -93,6 +97,7 @@ function renderFileList(filterKey) {
   `).join('');
 
   document.getElementById('fileListContent').innerHTML = toolbar + exportSection + head + `<div id="fileRows">${rows}</div>`;
+  loadExportCovers();
   setTimeout(loadVisibleThumbnails, 50);
 }
 
@@ -175,7 +180,9 @@ async function openFile(idx) {
   if (!globalSettings.root_path) { showToast('No Root Path set in Settings', 'var(--red)'); return; }
   const p = projects.find(x => x.active);
   if (!p) return;
-  const targetPath = await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+  const targetPath = f.subfolder
+    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
 
   if (f.app === 'Viewer') {
     const ext = f.ext ? f.ext.toLowerCase() : '';
@@ -234,7 +241,9 @@ async function revealFile(idx) {
   if (!globalSettings.root_path) { showToast('No root path set', 'var(--red)'); return; }
   const p = projects.find(x => x.active);
   if (!p) return;
-  const targetPath = await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+  const targetPath = f.subfolder
+    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
   try {
     await invoke('open_in_app', { exePath: 'explorer', filePath: '/select,' + targetPath });
     logAction(`Revealed ${f.name} in Explorer`, 'info');
@@ -248,7 +257,9 @@ async function copyPath(idx) {
   if (!globalSettings.root_path) { showToast('No root path set', 'var(--red)'); return; }
   const p = projects.find(x => x.active);
   if (!p) return;
-  const targetPath = await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+  const targetPath = f.subfolder
+    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
   try {
     await navigator.clipboard.writeText(targetPath);
     showToast('Path copied to clipboard', 'var(--green)');
@@ -307,5 +318,17 @@ function showCtx(e, idx) {
   if (r.bottom > window.innerHeight) menu.style.top  = (e.clientY - r.height) + 'px';
 }
 function removeCtx() { if (ctxEl) { ctxEl.remove(); setCtxEl(null); } }
+
+window.filterFileList = function(val) {
+  const rows = document.querySelectorAll('#fileRows .frow');
+  const q = val.toLowerCase().trim();
+  for (const row of rows) {
+    const name = row.querySelector('.fr-nm')?.textContent?.toLowerCase() || '';
+    row.style.display = !q || name.includes(q) ? '' : 'none';
+  }
+  const visible = Array.from(rows).filter(r => r.style.display !== 'none').length;
+  const cnt = document.querySelector('.file-breadcrumb span:last-child');
+  if (cnt) cnt.textContent = '— ' + visible + ' of ' + rows.length + ' items';
+};
 
 export { renderFileList, setFileView, goBackFolders, createBlendFile, openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile, showCtx, removeCtx }

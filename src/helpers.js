@@ -18,7 +18,7 @@ export function isViewableImage(ext) {
   return ['.png','.jpg','.jpeg','.gif','.webp','.svg','.bmp'].includes((ext || '').toLowerCase());
 }
 
-export const thumbCache = new Map();
+const thumbCache = new Map();
 
 export async function loadThumbnail(path, ext) {
   if (thumbCache.has(path)) return thumbCache.get(path);
@@ -64,4 +64,8 @@ export function sanitizeProjectId(id, fallback) {
   if (!id) return '\u2014';
   if (isStreamerMode()) return fallback || 'Project';
   return id;
+}
+
+export function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }

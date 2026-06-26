@@ -15,11 +15,13 @@ export let galCalMonth = new Date().getMonth();
 export let galCalDay = new Date().getDate();
 export let _galCalDateTarget = -1;
 export let thumbTargetIdx = null;
-export let globalSettings = { root_path: '', blender_path: '', painter_path: '', unity_path: '', streamer_mode: false, theme: 'dark' };
+export let globalSettings = { root_path: '', blender_path: '', painter_path: '', unity_path: '', streamer_mode: false, theme: 'dark', export_naming: '{target}_v{version}' };
+export let baseIdMap = {}; // base_id → current_folder_name
 
 export function setAllFiles(v) { ALL_FILES = v; }
 export function setProjects(v) { projects = v; }
 export function setGlobalSettings(v) { globalSettings = v; }
+export function setBaseIdMap(v) { baseIdMap = v; }
 export function setCurrentFolder(v) { currentFolder = v; }
 export function setFileView(v) { fileView = v; }
 export function setCurrentSort(v) { currentSort = v; }

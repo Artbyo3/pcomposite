@@ -1,7 +1,7 @@
 import { join } from '@tauri-apps/api/path';
-import { escapeHTML, formatBytes, sanitizeProjectId, sanitizePath, isStreamerMode } from './helpers.js';
+import { escapeHTML, formatBytes, sanitizeProjectId, isStreamerMode } from './helpers.js';
 import { FOLDERS, FOLDER_META, PIPELINE, CHECKLIST } from './constants.js';
-import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, currentFolder, setCurrentFolder, currentSort, activeFilters } from './state.js';
+import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, setCurrentFolder, currentSort, activeFilters } from './state.js';
 import { loadProject, saveProject, syncProjectFiles, scanVault } from './data.js';
 import { showToast, setVTab } from './ui.js';
 import { updateHeaderThumb } from './thumbnail.js';

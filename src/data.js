@@ -116,22 +116,83 @@ export async function syncProjectFiles(vaultPath, id, name) {
     const folder = entry.name;
     const folderPath = await join(dir, folder);
     try {
-      const files = await readDir(folderPath);
-      for (const file of files) {
-        if (file.isDirectory) continue;
-        const filePath = await join(folderPath, file.name);
-        const ext = '.' + (file.name.split('.').pop() || '').toUpperCase();
-        const info = await stat(filePath);
-        results.push({
-          name: file.name,
-          folder,
-          ext,
-          size_bytes: info.size,
-          app: FOLDER_APP[folder] || 'Explorer',
-          created_at: info.mtime ? new Date(info.mtime).toLocaleDateString() : new Date().toLocaleDateString(),
-        });
+      if (folder === 'fbx') {
+        const subdirs = await readDir(folderPath);
+        for (const sub of subdirs) {
+          if (!sub.isDirectory) {
+            const filePath = await join(folderPath, sub.name);
+            const ext = '.' + (sub.name.split('.').pop() || '').toUpperCase();
+            const info = await stat(filePath);
+            results.push({
+              name: sub.name,
+              folder,
+              ext,
+              size_bytes: info.size,
+              app: FOLDER_APP[folder] || 'Explorer',
+              created_at: info.mtime ? new Date(info.mtime).toLocaleDateString() : new Date().toLocaleDateString(),
+            });
+            continue;
+          }
+          const subFolderPath = await join(folderPath, sub.name);
+          try {
+            const files = await readDir(subFolderPath);
+            for (const file of files) {
+              if (file.isDirectory) continue;
+              const filePath = await join(subFolderPath, file.name);
+              const ext = '.' + (file.name.split('.').pop() || '').toUpperCase();
+              const info = await stat(filePath);
+              results.push({
+                name: file.name,
+                folder,
+                subfolder: sub.name,
+                ext,
+                size_bytes: info.size,
+                app: FOLDER_APP[folder] || 'Explorer',
+                created_at: info.mtime ? new Date(info.mtime).toLocaleDateString() : new Date().toLocaleDateString(),
+              });
+            }
+          } catch (e) { console.error('sync subfolder error:', e); }
+        }
+      } else {
+        const files = await readDir(folderPath);
+        for (const file of files) {
+          if (file.isDirectory) continue;
+          const filePath = await join(folderPath, file.name);
+          const ext = '.' + (file.name.split('.').pop() || '').toUpperCase();
+          const info = await stat(filePath);
+          results.push({
+            name: file.name,
+            folder,
+            ext,
+            size_bytes: info.size,
+            app: FOLDER_APP[folder] || 'Explorer',
+            created_at: info.mtime ? new Date(info.mtime).toLocaleDateString() : new Date().toLocaleDateString(),
+          });
+        }
       }
     } catch (e) { console.error('syncProjectFiles error:', e); }
   }
   return results;
+}
+
+export async function scanBaseIds(vaultPath) {
+  const basesDir = await join(vaultPath, '_bases');
+  if (!(await exists(basesDir))) return {};
+  const entries = await readDir(basesDir);
+  const map = {};
+  for (const entry of entries) {
+    if (!entry.isDirectory) continue;
+    const folderPath = await join(basesDir, entry.name);
+    const idPath = await join(folderPath, '.pcom_id');
+    let id;
+    if (await exists(idPath)) {
+      id = (await readTextFile(idPath)).trim();
+    } else {
+      const { generateId } = await import('./helpers.js');
+      id = generateId();
+      await writeTextFile(idPath, id);
+    }
+    map[id] = entry.name;
+  }
+  return map;
 }

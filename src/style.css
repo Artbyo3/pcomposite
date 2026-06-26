@@ -11,9 +11,11 @@
     --text: #e4e4f0;
     --text2: #7a7a90;
     --text3: #484858;
+    --text4: #303040;
     --green: #3ddc84;
     --red: #ff4d6a;
     --orange: #ff8c42;
+    --yellow: #fbbf24;
     --blue: #47c5ff;
     --c-blender: #ff6b35;
     --c-subs: #a78bfa;
@@ -37,6 +39,8 @@
     --text: #f0e4ec;
     --text2: #a07a90;
     --text3: #684858;
+    --text4: #483848;
+    --yellow: #fbbf24;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -101,15 +105,5 @@
     color:var(--accent); font-size:8px; letter-spacing:0;
   }
 
-  /* PANEL EMPTY */
-  .panel-empty {
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    flex:1; padding:40px 20px; text-align:center; gap:8px;
-  }
-  .panel-empty-icon { font-size:24px; opacity:.2; }
-  .panel-empty-text { font-size:10px; font-family:'Space Mono',monospace; color:var(--text3); }
-
   @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
   .pcard { animation:fadeUp .16s ease both; }
-  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
-  .pulse { animation:pulse 2s infinite; }

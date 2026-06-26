@@ -1,13 +1,13 @@
 import { escapeHTML } from './helpers.js';
-import { ALL_FILES, globalSettings } from './state.js';
-import { readDir, exists } from '@tauri-apps/plugin-fs';
+import { ALL_FILES, globalSettings, baseIdMap } from './state.js';
+import { readDir, exists, readFile } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { showToast } from './ui.js';
 import { saveActiveProject } from './projects.js';
 import { renderFileList } from './files.js';
 import { writeBridgeContext } from './bridge.js';
 
-// ── EXPORTS MANAGEMENT (integrated into export/ folder view) ──
+// ── EXPORTS MANAGEMENT (integrated into fbx folder view) ──
 function buildExportSection() {
   const exports = window._currentExports || [];
   const fbxFiles = ALL_FILES.filter(f => f.folder === 'fbx');
@@ -15,133 +15,88 @@ function buildExportSection() {
   for (const ex of exports) if (ex.fileNames) ex.fileNames.forEach(n => assigned.add(n));
   const unassigned = fbxFiles.filter(f => !assigned.has(f.name));
 
-  // Group by target (base name)
   const groups = {};
   for (const ex of exports) {
-    const arr = groups[ex.target] || (groups[ex.target] = []);
-    arr.push(ex);
+    (groups[ex.target] || (groups[ex.target] = [])).push(ex);
   }
-  // Sort targets alphabetically
   const sortedTargets = Object.keys(groups).sort();
 
-  // Determine which target to show expanded (first or one with changes)
-  // We'll default to first target expanded
-
-  let html = '<div id="exportSection" class="export-section">';
+  let html = '<div class="export-section">';
   html += '<div class="exp-header">';
   html += '<span class="exp-header-icon">📦</span>';
   html += '<span class="exp-header-title">EXPORTS</span>';
-  html += '<span class="exp-header-count">' + exports.length + ' record' + (exports.length !== 1 ? 's' : '') + ' · ' + fbxFiles.length + ' files</span>';
+  html += '<span class="exp-header-count">' + sortedTargets.length + ' target' + (sortedTargets.length !== 1 ? 's' : '') + ' · ' + exports.length + ' version' + (exports.length !== 1 ? 's' : '') + ' · ' + fbxFiles.length + ' files</span>';
+  html += '<button class="exp-header-btn sec" onclick="toggleAllCollapse()" id="expCollapseAllBtn">▲ All</button>';
   html += '<button class="exp-header-btn" onclick="addExport()">+ New Export</button>';
   html += '</div>';
 
+  if (sortedTargets.length >= 4) {
+    html += '<div class="exp-jump">';
+    for (const target of sortedTargets) {
+      const esc = escapeHTML(target).replace(/'/g, "\\'");
+      html += '<span class="exp-jump-item" onclick="jumpToExport(\'' + esc + '\')">' + escapeHTML(target) + '</span>';
+    }
+    html += '</div>';
+  }
+
   if (!exports.length) {
-    html += '<div class="exp-empty"><div class="exp-empty-text">No exports recorded yet<br>Click <b style="color:var(--accent)">+ New Export</b> to group your FBX files by avatar</div></div>';
-    if (unassigned.length) html += '<div class="exp-empty-sub" style="padding:0 20px 14px;text-align:center">' + unassigned.length + ' unassigned file' + (unassigned.length !== 1 ? 's' : '') + ' below</div>';
+    html += '<div class="exp-empty"><div class="exp-empty-text">No exports recorded yet<br>Click <b style="color:var(--accent)">+ New Export</b> to group your FBX files</div></div>';
+    if (unassigned.length) html += '<div class="exp-empty-sub" style="padding:0 0 14px;text-align:center">' + unassigned.length + ' unassigned file' + (unassigned.length !== 1 ? 's' : '') + ' below</div>';
     html += '</div>';
     return html;
   }
 
-  // Per-base columns
-  html += '<div style="display:flex;flex-direction:column;gap:14px">';
   for (const target of sortedTargets) {
     const items = groups[target].slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    const currentIdx = items.findIndex(x => x.isFinal);
-    const finalIdx = currentIdx >= 0 ? currentIdx : 0;
-    const current = items[finalIdx];
-    const others = items.filter((_, i) => i !== finalIdx);
+    const isCollapsed = localStorage.getItem('pcom_expand_' + target) === '0';
 
-    html += '<div class="exp-col">';
-    html += '<div class="exp-col-head" onclick="_toggleExpCollapse(this)">';
-    html += '<span class="exp-col-toggle">▾</span>';
-    html += '<div class="exp-col-info">';
-    html += '<span class="exp-col-name">' + escapeHTML(target) + '</span>';
-    html += '<span class="exp-badge">v' + (current.version || items.length) + '</span>';
-    if (current.isFinal) html += '<span class="exp-badge">CURRENT</span>';
-    html += '</div>';
-    html += '<span class="exp-col-version-count">' + items.length + ' version' + (items.length !== 1 ? 's' : '') + '</span>';
-    html += '<button class="exp-btn danger" onclick="event.stopPropagation();deleteExportGroup(\'' + escapeHTML(target).replace(/'/g, "\\'") + '\')" title="Delete all">✕</button>';
-    html += '</div>';
+    html += '<div class="exp-target' + (isCollapsed ? ' collapsed' : '') + '" data-target="' + escapeHTML(target).replace(/"/g, '&quot;') + '">';
+    html += '<div class="exp-target-body">';
+    html += '<div class="exp-target-head" onclick="toggleExportCollapse(\'' + escapeHTML(target).replace(/'/g, "\\'") + '\')">';
+    html += '<div class="exp-cover-img" data-initial="' + escapeHTML(target.charAt(0).toUpperCase()) + '"></div>';
+    html += '<span class="exp-collapse-arrow">▾</span>';
+    html += '<span class="exp-target-name">' + escapeHTML(target) + '</span>';
+    html += '<span class="exp-target-vercount">' + items.length + ' version' + (items.length !== 1 ? 's' : '') + '</span>';
 
-    // Current version card
-    html += '<div class="exp-card" style="' + (current.isFinal ? 'border-left-color:var(--green)' : '') + '">';
-    html += '<div class="exp-top">';
-    html += '<span class="exp-date">v' + (current.version || items.length) + ' · ' + (current.date || '—') + '</span>';
-    if (current.isFinal) html += '<span class="exp-badge">CURRENT</span>';
-    html += '<span class="exp-note-tag">' + (current.note ? escapeHTML(current.note) : '') + '</span>';
-    html += '<div class="exp-top-actions">';
-    html += '<button class="exp-btn" onclick="toggleFinalExport(' + exports.indexOf(current) + ')" title="' + (current.isFinal ? 'Unmark as current' : 'Mark as current') + '">★</button>';
-    html += '<button class="exp-btn danger" onclick="deleteExport(' + exports.indexOf(current) + ')" title="Delete">✕</button>';
-    html += '</div></div>';
-    if (current.fileNames && current.fileNames.length) {
-      html += '<div class="exp-files-list">';
-      for (const fn of current.fileNames) {
+    html += '</div>';
+    html += '<div class="exp-vrows">';
+
+    for (const ex of items) {
+      const exIdx = exports.indexOf(ex);
+      html += '<div class="exp-vrow' + (ex.isFinal ? ' exp-vrow-current' : '') + '">';
+      html += '<span class="exp-vbadge">v' + (ex.version || '—') + '</span>';
+      html += '<span class="exp-vdate">' + (ex.date || '') + '</span>';
+      if (ex.isFinal) html += '<span class="exp-vcurrent">CURRENT</span>';
+      if (ex.note) html += '<span class="exp-vnote">' + escapeHTML(ex.note) + '</span>';
+      html += '<div class="exp-vfiles">';
+      if (ex.fileNames) for (const fn of ex.fileNames) {
         const f = fbxFiles.find(x => x.name === fn);
         html += '<span class="exp-file-tag" style="' + (f ? 'background:' + f.ec + '18;color:' + f.ec : '') + '">' + escapeHTML(fn) + '</span>';
       }
       html += '</div>';
-    }
-    html += '</div>';
-
-    // Older versions
-    if (others.length) {
-      html += '<div class="exp-older-wrap">';
-      html += '<div class="exp-older-toggle" onclick="_toggleExpOlder(this)"><span>▸</span> ' + others.length + ' older version' + (others.length !== 1 ? 's' : '') + '</div>';
-      html += '<div class="exp-older-list" style="display:none">';
-      for (const ex of others) {
-        html += '<div class="exp-card exp-old" style="' + (ex.isFinal ? 'border-left-color:var(--green)' : '') + '">';
-        html += '<div class="exp-top">';
-        html += '<span class="exp-date">v' + (ex.version || '—') + ' · ' + (ex.date || '—') + '</span>';
-        if (ex.isFinal) html += '<span class="exp-badge">CURRENT</span>';
-        html += '<span class="exp-note-tag">' + (ex.note ? escapeHTML(ex.note) : '') + '</span>';
-        html += '<div class="exp-top-actions">';
-        html += '<button class="exp-btn" onclick="toggleFinalExport(' + exports.indexOf(ex) + ')" title="Mark as current">★</button>';
-        html += '<button class="exp-btn danger" onclick="deleteExport(' + exports.indexOf(ex) + ')" title="Delete">✕</button>';
-        html += '</div></div>';
-        if (ex.fileNames && ex.fileNames.length) {
-          html += '<div class="exp-files-list">';
-          for (const fn of ex.fileNames) {
-            const f = fbxFiles.find(x => x.name === fn);
-            html += '<span class="exp-file-tag" style="' + (f ? 'background:' + f.ec + '18;color:' + f.ec : '') + '">' + escapeHTML(fn) + '</span>';
-          }
-          html += '</div>';
-        }
-        html += '</div>';
-      }
-      html += '</div></div>';
+      html += '<div class="exp-vactions">';
+      html += '<button class="exp-btn" onclick="toggleFinalExport(' + exIdx + ')" title="' + (ex.isFinal ? 'Unmark as current' : 'Mark as current') + '">★</button>';
+      html += '</div>';
+      html += '</div>';
     }
 
-    html += '</div>';
+    html += '</div>'; // exp-vrows
+    html += '</div>'; // exp-target-body
+    html += '</div>'; // exp-target
   }
-  html += '</div></div>';
+
+  if (unassigned.length) {
+    html += '<div class="exp-unassigned">';
+    html += '<div class="exp-unassigned-title">' + unassigned.length + ' unassigned file' + (unassigned.length !== 1 ? 's' : '') + '</div>';
+    html += '<div class="exp-unassigned-list">';
+    for (const f of unassigned) {
+      html += '<span class="exp-file-tag" style="background:' + f.ec + '18;color:' + f.ec + ';cursor:default">' + escapeHTML(f.name) + '</span>';
+    }
+    html += '</div></div>';
+  }
+
+  html += '</div>';
   return html;
-}
-
-function _toggleExpCollapse(el) {
-  const col = el.closest('.exp-col');
-  const body = col.querySelectorAll('.exp-card, .exp-older-wrap');
-  const toggle = el.querySelector('.exp-col-toggle');
-  if (col.classList.toggle('exp-col-collapsed')) {
-    body.forEach(b => b.style.display = 'none');
-    toggle.textContent = '▸';
-  } else {
-    body.forEach(b => b.style.display = '');
-    toggle.textContent = '▾';
-    // Also collapse older versions list
-    const older = col.querySelector('.exp-older-list');
-    if (older) older.style.display = 'none';
-  }
-}
-function _toggleExpOlder(el) {
-  const list = el.parentElement.querySelector('.exp-older-list');
-  const arrow = el.querySelector('span');
-  if (list.style.display === 'none') {
-    list.style.display = '';
-    arrow.textContent = '▾';
-  } else {
-    list.style.display = 'none';
-    arrow.textContent = '▸';
-  }
 }
 
 async function _scanBasesGroups() {
@@ -171,12 +126,8 @@ async function addExport() {
   for (const ex of exports) if (ex.fileNames) ex.fileNames.forEach(n => assigned.add(n));
   const available = fbxFiles.filter(f => !assigned.has(f.name));
 
-  const fileCheckboxes = available.map(f =>
-    '<label style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--text2);cursor:pointer;padding:2px 0">' +
-    '<input type="checkbox" class="_expFileCb" value="' + escapeHTML(f.name).replace(/"/g, '&quot;') + '" checked>' +
-    '<span style="width:6px;height:6px;border-radius:1px;background:' + f.ec + ';display:inline-block"></span> ' +
-    escapeHTML(f.name) +
-    '</label>'
+  const filePills = available.map(f =>
+    '<span class="exp-file-pill selected" data-file="' + escapeHTML(f.name).replace(/"/g, '&quot;') + '" style="--file-color:' + f.ec + '">' + escapeHTML(f.name) + '</span>'
   ).join('');
 
   const overlay = document.createElement('div');
@@ -187,8 +138,8 @@ async function addExport() {
   document.addEventListener('keydown', escHandler);
 
   const basesHint = !globalSettings.root_path
-    ? '<div class="modal-hint" style="color:var(--orange)">Set a <b>Vault Path</b> in Settings to populate the dropdown</div>'
-    : (hasDirBases ? '<div class="modal-hint" style="color:var(--text3)">' + bases.length + ' base group' + (bases.length !== 1 ? 's' : '') + ' found</div>' : '<div class="modal-hint" style="color:var(--text3)">Add base groups in the Bases Library first</div>');
+    ? '<span class="modal-hint" style="color:var(--orange)">Set Vault Path in Settings</span>'
+    : '<span class="modal-hint" style="color:var(--text3)">' + bases.length + ' base' + (bases.length !== 1 ? 's' : '') + ' found</span>';
 
   const defaultTarget = bases.length ? bases[0] : (existingTargets.length === 1 ? existingTargets[0] : '');
   const nextVer = defaultTarget ? getNextVersion(exports, defaultTarget) : 1;
@@ -203,21 +154,25 @@ async function addExport() {
     + '<label class="fl">TARGET BASE</label>'
     + (hasDirBases
       ? '<select id="_expTarget" class="fi">' + baseOptions + '</select>'
-      : '<input id="_expTarget" list="_expTargets" class="fi" placeholder="Type base name (e.g. Base Male)" value="' + (defaultTarget ? escapeHTML(defaultTarget).replace(/"/g, '&quot;') : '') + '">'
+      : '<input id="_expTarget" list="_expTargets" class="fi" placeholder="e.g. Base Male" value="' + (defaultTarget ? escapeHTML(defaultTarget).replace(/"/g, '&quot;') : '') + '">'
       + (existingTargets.length ? '<datalist id="_expTargets">' + baseOptions + '</datalist>' : '')
     )
     + '</div>'
-    + '<div class="fg vp-box">'
+    + '<div class="fg exp-mid-row">'
+    + '<div class="vp-box">'
     + '<span class="vp-label">VERSION</span>'
     + '<span id="_expVerPreview" class="vp-value">' + nextVer + '</span>'
     + '</div>'
-    + '<div class="fg"><input id="_expNote" class="fi" placeholder="Note (e.g. final cleanup)"></div>'
-    + '<div class="fg"><input id="_expDate" type="date" class="fi" value="' + new Date().toISOString().slice(0, 10) + '"></div>'
+    + '<input id="_expDate" type="date" class="fi fi-compact" value="' + new Date().toISOString().slice(0, 10) + '">'
+    + '<label class="exp-final-label" title="Mark as current"><input type="checkbox" id="_expFinal"> ★</label>'
+    + '</div>'
+    + '<div class="fg"><input id="_expNote" class="fi" placeholder="Note (optional)"></div>'
     + (available.length
-      ? '<div class="fg exp-modal-section"><label class="fl">INCLUDE FBX FILES</label>' + fileCheckboxes + '</div>'
-      : '<div class="fg exp-modal-section"><div class="exp-modal-empty">All FBX files are already assigned to exports</div></div>'
+      ? '<div class="fg"><label class="fl">FILES</label><div class="exp-pills" id="_expPills">'
+        + filePills
+        + '</div></div>'
+      : '<div class="fg"><div class="exp-modal-empty">All FBX files are already assigned</div></div>'
     )
-    + '<div class="fg"><label class="exp-modal-label"><input id="_expFinal" type="checkbox"> Mark as current</label></div>'
     + '</div>'
     + '<div class="modal-ft">'
     + '<button onclick="this.closest(\'.ov\').remove()" class="btn-sec">Cancel</button>'
@@ -226,6 +181,13 @@ async function addExport() {
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('open'));
   setTimeout(() => document.getElementById('_expTarget')?.focus(), 200);
+
+  // Pill toggle
+  const pillsEl = document.getElementById('_expPills');
+  if (pillsEl) pillsEl.addEventListener('click', e => {
+    const pill = e.target.closest('.exp-file-pill');
+    if (pill) pill.classList.toggle('selected');
+  });
 
   // Update version preview when target changes
   const targetInput = document.getElementById('_expTarget');
@@ -259,7 +221,7 @@ function saveExport(btn) {
   if (!target) { showToast('Select or enter a target base name', 'var(--orange)'); return; }
 
   const selectedFiles = [];
-  document.querySelectorAll('._expFileCb:checked').forEach(cb => selectedFiles.push(cb.value));
+  document.querySelectorAll('#_expPills .exp-file-pill.selected').forEach(p => selectedFiles.push(p.dataset.file));
 
   const exports = window._currentExports || [];
 
@@ -269,8 +231,14 @@ function saveExport(btn) {
   if (isFinal) {
     for (const ex of exports) { if (ex.target === target) ex.isFinal = false; }
   }
+  // Look up base_id from current ID map
+  let baseId = '';
+  for (const [id, name] of Object.entries(baseIdMap)) {
+    if (name === target) { baseId = id; break; }
+  }
   exports.push({
     id: 'exp_' + Date.now().toString(36),
+    base_id: baseId,
     target,
     date: dateInput || new Date().toISOString().slice(0, 10),
     note: note || '',
@@ -318,4 +286,77 @@ function deleteExportGroup(target) {
   writeBridgeContext();
 }
 
-export { buildExportSection, addExport, saveExport, toggleFinalExport, deleteExport, deleteExportGroup, _toggleExpCollapse, _toggleExpOlder };
+window.jumpToExport = function(target) {
+  const card = document.querySelector('.exp-target[data-target="' + target.replace(/"/g, '&quot;') + '"]');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.remove('collapsed');
+    localStorage.setItem('pcom_expand_' + target, '1');
+  }
+};
+
+window.toggleExportCollapse = function(target) {
+  const cards = document.querySelectorAll('.exp-target');
+  for (const card of cards) {
+    const name = card.querySelector('.exp-target-name');
+    if (name && name.textContent === target) {
+      card.classList.toggle('collapsed');
+      localStorage.setItem('pcom_expand_' + target, card.classList.contains('collapsed') ? '0' : '1');
+      break;
+    }
+  }
+  updateCollapseAllLabel();
+};
+
+window.toggleAllCollapse = function() {
+  const allCollapsed = document.querySelectorAll('.exp-target.collapsed');
+  const total = document.querySelectorAll('.exp-target').length;
+  const collapseAll = allCollapsed.length < total;
+  document.querySelectorAll('.exp-target').forEach(card => {
+    const name = card.querySelector('.exp-target-name')?.textContent;
+    if (name) {
+      card.classList.toggle('collapsed', collapseAll);
+      localStorage.setItem('pcom_expand_' + name, collapseAll ? '0' : '1');
+    }
+  });
+  updateCollapseAllLabel();
+};
+
+function updateCollapseAllLabel() {
+  const btn = document.getElementById('expCollapseAllBtn');
+  if (!btn) return;
+  const allCollapsed = document.querySelectorAll('.exp-target.collapsed').length;
+  const total = document.querySelectorAll('.exp-target').length;
+  btn.textContent = allCollapsed >= total ? '▾ All' : '▲ All';
+}
+
+async function loadExportCovers() {
+  if (!globalSettings.root_path) return;
+  const cards = document.querySelectorAll('.exp-target[data-target]');
+  // Build name → id lookup for renamed folders
+  const nameToId = {};
+  for (const [id, name] of Object.entries(baseIdMap)) nameToId[name] = id;
+
+  for (const card of cards) {
+    const target = card.dataset.target;
+    // Resolve folder name using ID map (handles renames)
+    const baseId = nameToId[target];
+    const folderName = baseId ? baseIdMap[baseId] : target;
+    const baseDir = await join(globalSettings.root_path, '_bases', folderName);
+    if (!(await exists(baseDir))) continue;
+    const entries = await readDir(baseDir);
+    const cover = entries.find(e => !e.isDirectory && e.name.toLowerCase().startsWith('cover'));
+    if (!cover) continue;
+    try {
+      const coverPath = await join(baseDir, cover.name);
+      const ext = cover.name.split('.').pop().toLowerCase();
+      const mime = { png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',bmp:'image/bmp' }[ext] || 'image/png';
+      const bytes = await readFile(coverPath);
+      const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+      const imgEl = card.querySelector('.exp-cover-img');
+      if (imgEl) imgEl.style.backgroundImage = 'url(' + url + ')';
+    } catch (e) { console.warn('Failed to load cover for', target, e); }
+  }
+}
+
+export { buildExportSection, addExport, saveExport, toggleFinalExport, deleteExport, deleteExportGroup, loadExportCovers };

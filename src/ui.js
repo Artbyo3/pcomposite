@@ -3,7 +3,7 @@ import { FOLDERS, PIPELINE, CHECKLIST } from './constants.js';
 import { ALL_FILES, projects, globalSettings, setCurrentSort, activeFilters, currentFolder } from './state.js';
 import { join, basename, extname } from '@tauri-apps/api/path';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
-import { copyFile, stat, mkdir, exists, rename, remove, readDir } from '@tauri-apps/plugin-fs';
+import { copyFile, stat, mkdir, exists, remove, readDir } from '@tauri-apps/plugin-fs';
 import { loadProject, saveProject } from './data.js';
 import { loadProjects, renderProjects, selectProject } from './projects.js';
 import { renderFileList } from './files.js';
@@ -212,10 +212,16 @@ async function handleDroppedFiles(paths) {
       if (!(await exists(targetDir))) await mkdir(targetDir, { recursive: true });
 
       const destPath = await join(targetDir, baseNm);
+
+      // Normalize paths for comparison
+      const srcNorm = filePath.replace(/\\/g, '/').toLowerCase();
+      const dstNorm = destPath.replace(/\\/g, '/').toLowerCase();
+      if (srcNorm === dstNorm) { imported++; continue; }
+
+      // Remove destination if exists (copyFile doesn't overwrite)
       if (await exists(destPath)) await remove(destPath);
 
-      try { await rename(filePath, destPath); }
-      catch { await copyFile(filePath, destPath); await remove(filePath); }
+      await copyFile(filePath, destPath);
 
       const fileInfo  = await stat(destPath);
       const sizeBytes = fileInfo.size;

@@ -111,16 +111,6 @@
 }
 .set-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--bg); }
 
-/* ── UTILITIES ── */
-.set-path-info {
-  margin-top:8px; font-size:10px; font-family:'Space Mono',monospace; color:var(--text2);
-}
-.set-path-info span { color:var(--accent); }
-.set-empty {
-  padding:16px; text-align:center; font-size:10px;
-  font-family:'Space Mono',monospace; color:var(--text2); letter-spacing:1px;
-}
-
 /* ── TOGGLE ── */
 .toggle-row {
   display:flex; align-items:center; gap:12px;
@@ -162,3 +152,23 @@
   color:var(--text3); text-transform:uppercase; padding:5px 10px 8px;
 }
 .theme-card.active .tcl { color:var(--accent); }
+
+/* ── EXPORT NAMING ── */
+.naming-vars {
+  display:flex; gap:5px; margin:8px 0;
+}
+.nv-chip {
+  font-size:8px; font-family:'Space Mono',monospace; font-weight:600;
+  padding:2px 8px; border-radius:4px;
+  background:var(--bg3); color:var(--text3);
+  border:1px solid var(--border);
+}
+.naming-preview {
+  font-size:10px; font-family:'Space Mono',monospace;
+  padding:8px 10px; border-radius:5px;
+  background:var(--bg); border:1px solid var(--border2);
+  color:var(--text2); word-break:break-all;
+}
+.naming-preview::before {
+  content:'Preview: '; font-weight:700; color:var(--text3);
+}

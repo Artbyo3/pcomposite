@@ -28,12 +28,11 @@ import { loadProjects, renderProjects, selectProject, saveActiveProject } from '
 import { renderFileList, setFileView as setFileViewFn, goBackFolders,
   createBlendFile, openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile,
   showCtx, removeCtx } from './files.js';
-import { addExport, saveExport, toggleFinalExport, deleteExport, deleteExportGroup,
-  _toggleExpCollapse, _toggleExpOlder } from './exports.js';
+import { addExport, saveExport, toggleFinalExport, deleteExport, deleteExportGroup } from './exports.js';
 import { openGallery, closeGallery, setGalleryFilter, setGalleryView, renderGallery, renderGalleryCalendar,
   galCalPrev, galCalNext, galCalToday, galCalGoMonth, galCalSetView, galCalSetRelease,
   triggerDatePicker, openFromGallery } from './gallery.js';
-import { openBases, closeBases, renderBases, importBase } from './bases.js';
+import { openBases, closeBases, renderBases, importBase, createGroup, importInBlender, removeBaseFile, removeGroup, addFilesToDetail } from './bases.js';
 import { triggerThumb, triggerActiveThumb, updateHeaderThumb } from './thumbnail.js';
 import { showToast, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab,
   setSort, toggleFilter, refreshInfoPanel, initDragDrop } from './ui.js';
@@ -114,9 +113,8 @@ Object.assign(window, {
   openModal, closeModal, closeOvOut, toggleFci, createProject,
   openGallery, closeGallery, setGalleryFilter, setGalleryView, renderGallery, openFromGallery,
   renderGalleryCalendar, galCalPrev, galCalNext, galCalToday, galCalSetView, galCalGoMonth, galCalSetRelease, triggerDatePicker,
-  openBases, closeBases, importBase,
+  openBases, closeBases, importBase, createGroup, importInBlender, removeBaseFile, removeGroup, addFilesToDetail,
   addExport, saveExport, toggleFinalExport, deleteExport, deleteExportGroup,
-  _toggleExpCollapse, _toggleExpOlder,
   triggerThumb, triggerActiveThumb, updateHeaderThumb,
   revealProjectRoot: window.revealProjectRoot, copyProjectPath: window.copyProjectPath, saveActiveProject,
   openSettings, closeSettings, pickSettingPath,

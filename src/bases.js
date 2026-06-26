@@ -294,7 +294,7 @@ async function openGroup(group) {
   </div>`;
 
   // Right: file list
-  const dropHintSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`;
+  const dropHintSvg = `<img src="/dropfiles.png" width="16" height="16" style="object-fit:contain">`;
   let rightHtml = '';
   if (!files.length) {
     rightHtml = `<div class="bd-dropzone" onclick="addFilesToDetail()">
@@ -566,11 +566,6 @@ async function removeGroup(group) {
   } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
 }
 
-async function renameGroup(oldName) {
-  // Deprecated — use startInlineRename instead; kept for backwards compat
-  await startInlineRename();
-}
-
 async function createGroup() {
   const name = prompt('New group name:');
   if (!name) return;
@@ -586,4 +581,4 @@ async function createGroup() {
   } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
 }
 
-export { openBases, closeBases, renderBases, importBase, importInBlender, addFilesToGroup, removeBaseFile, removeGroup, renameGroup, createGroup };
+export { openBases, closeBases, renderBases, importBase, importInBlender, addFilesToGroup, removeBaseFile, removeGroup, createGroup, addFilesToDetail };

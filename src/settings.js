@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { escapeHTML, isStreamerMode, sanitizePath } from './helpers.js';
-import { globalSettings } from './state.js';
+import { globalSettings, projects } from './state.js';
 import { loadSettings as loadJSONSettings, saveSettings, migrateOldBases, ensureVaultBasesDir } from './data.js';
 import { showToast } from './ui.js';
 
@@ -46,13 +46,14 @@ async function openSettings() {
 }
 
 function renderSettings() {
-  const sections = ['general','integrations','appearance'];
-  const names = { general:'General', integrations:'App Integrations', appearance:'Appearance' };
+  const sections = ['general','naming','integrations','appearance'];
+  const names = { general:'General', naming:'Export Naming', integrations:'App Integrations', appearance:'Appearance' };
   document.getElementById('setContent').innerHTML =
     sections.map(s => `<div class="set-section">
       <div class="set-section-head">${names[s]}</div>
       ${renderSectionContent(s)}
     </div>`).join('');
+  setTimeout(updateNamingPreview, 50);
 }
 
 function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
@@ -104,6 +105,19 @@ function renderSectionContent(section) {
     </div>`;
   }
 
+  if (section === 'naming') {
+    const projectName = projects.find(x => x.active)?.name || 'MyProject';
+    return `<div class="set-group">
+      <div class="set-group-title">Export File Naming</div>
+      <div class="set-group-desc">Customise the filename pattern for exports. Variables auto-replace when exporting.</div>
+      <div class="fg"><input id="set_export_naming" class="fi" value="${escapeHTML(globalSettings.export_naming || '{target}_v{version}')}" oninput="saveNamingPattern()"></div>
+      <div class="naming-vars">
+        <span class="nv-chip">{project}</span> <span class="nv-chip">{target}</span> <span class="nv-chip">{version}</span> <span class="nv-chip">{date}</span>
+      </div>
+      <div class="naming-preview" id="namingPreview"></div>
+    </div>`;
+  }
+
   if (section === 'integrations') {
     const apps = ['blender', 'painter', 'unity'];
     const appIcons = {
@@ -136,7 +150,7 @@ function renderSectionContent(section) {
               </div>
                 ${key === 'blender' ? `
                   <div class="addon-box" onmousedown="dragStart(event)" onmousemove="dragMove(event)" onmouseup="dragEnd(event)">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+                  <img src="/addon_icon.png" width="22" height="22" style="object-fit:contain">
                   <div class="addon-title">Blender Addon</div>
                   <div class="addon-sub">Drag this card into Blender to install</div>
                 </div>` : ''}
@@ -168,6 +182,33 @@ function renderSectionContent(section) {
   return '';
 }
 
+function previewNaming(pattern) {
+  const p = projects.find(x => x.active);
+  const subs = {
+    '{project}': p?.name || 'MyProject',
+    '{target}': 'Character',
+    '{version}': '3',
+    '{date}': new Date().toISOString().slice(0, 10),
+  };
+  let out = pattern;
+  for (const [k, v] of Object.entries(subs)) out = out.replaceAll(k, v);
+  return out.replace(/[<>:"/\\|?*]/g, '_').replace(/ /g, '_') + '.fbx';
+}
+
+window.updateNamingPreview = function() {
+  const el = document.getElementById('set_export_naming');
+  const preview = document.getElementById('namingPreview');
+  if (el && preview) preview.textContent = previewNaming(el.value);
+};
+
+window.saveNamingPattern = async function() {
+  const el = document.getElementById('set_export_naming');
+  if (!el) return;
+  const val = el.value.trim() || '{target}_v{version}';
+  await saveSetting('export_naming', val);
+  updateNamingPreview();
+};
+
 let dragState = null;
 let dragClone = null;
 
@@ -189,7 +230,7 @@ window.dragMove = async function(e) {
 
     const clone = document.createElement('div');
     clone.className = 'addon-box drag-clone';
-    clone.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><div class="addon-title">BLENDER ADDON</div><div class="addon-sub">Drop on Blender to install</div>';
+    clone.innerHTML = '<img src="/addon_icon.png" width="22" height="22" style="object-fit:contain"><div class="addon-title">BLENDER ADDON</div><div class="addon-sub">Drop on Blender to install</div>';
     clone.style.left = (e.clientX - 100) + 'px';
     clone.style.top = (e.clientY - 48) + 'px';
     document.body.appendChild(clone);

@@ -60,7 +60,7 @@
   font-size: 8px; font-family: 'Space Mono', monospace; letter-spacing: .5px;
   padding: 3px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
 }
-.bc-badge.all-imported { color: var(--green); background: var(--green)12; }
+.bc-badge.all-imported { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
 .bc-badge.partial { color: var(--text2); background: var(--bg3); opacity: .7; }
 
 /* ── EMPTY STATE ── */
@@ -256,7 +256,7 @@
 }
 .bf-tag {
   font-size: 7px; font-weight: 700; letter-spacing: .5px;
-  background: var(--green)15; color: var(--green);
+  background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green);
   padding: 1px 5px; border-radius: 3px;
   font-family: 'Space Mono', monospace; width: fit-content;
 }
@@ -283,6 +283,6 @@
 }
 .bf-act:hover { border-color: var(--accent); color: var(--accent); background: var(--bg); }
 .bf-act.blender { color: var(--c-blender); }
-.bf-act.blender:hover { border-color: var(--c-blender); color: var(--c-blender); background: var(--c-blender)10; }
+.bf-act.blender:hover { border-color: var(--c-blender); color: var(--c-blender); background: color-mix(in srgb, var(--c-blender) 10%, transparent); }
 .bf-act.danger { color: var(--red); }
-.bf-act.danger:hover { border-color: var(--red); color: var(--red); background: var(--red)10; }
+.bf-act.danger:hover { border-color: var(--red); color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
