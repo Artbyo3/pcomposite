@@ -145,8 +145,8 @@
   }
   .vt-btn:hover { color:var(--text2); }
   .vt-btn.on { background:var(--bg4); color:var(--text); }
-  .btn-blend { display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 11px; background:var(--c-blender); color:#fff; border:none; border-radius:7px; cursor:pointer; font-family:'Space Mono',monospace; font-size:8px; font-weight:700; letter-spacing:1px; transition:all .15s; }
-  .btn-blend:hover { filter:brightness(1.2); box-shadow:0 0 20px color-mix(in srgb,var(--c-blender) 30%,transparent); }
+  .btn-create { display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 11px; color:#fff; border:none; border-radius:7px; cursor:pointer; font-family:'Space Mono',monospace; font-size:8px; font-weight:700; letter-spacing:1px; transition:all .15s; }
+  .btn-create:hover { filter:brightness(1.2); box-shadow:0 0 20px color-mix(in srgb,var(--accent) 30%,transparent); }
   .file-table-head {
     display:grid; align-items:center;
     padding:9px 12px 7px; margin-bottom:3px;

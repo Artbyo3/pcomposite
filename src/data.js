@@ -1,5 +1,6 @@
 import { appDataDir, join } from '@tauri-apps/api/path';
 import { readTextFile, writeTextFile, exists, mkdir, readDir, stat, copyFile } from '@tauri-apps/plugin-fs';
+import { globalSettings } from './state.js';
 
 const DIR = 'pcomposite';
 let _base = null;
@@ -104,7 +105,13 @@ export async function migrateOldBases(vaultPath, oldBasesPath) {
   }
 }
 
-const FOLDER_APP = { blender:'Blender', subs:'Painter', unity:'Unity', fbx:'Explorer', pictures:'Viewer', 'promo art':'Viewer', resonite:'Explorer', export:'Explorer' };
+function _appForFolder(folder) {
+  const tools = globalSettings.tools || [];
+  const tool = tools.find(t => t.folder_key === folder);
+  if (tool) return tool.name;
+  if (['.png','.jpg','.jpeg','.gif','.webp','.svg','.bmp'].some(e => folder.includes('picture') || folder === 'images')) return 'Viewer';
+  return 'Explorer';
+}
 
 export async function syncProjectFiles(vaultPath, id, name) {
   const dir = await projectDir(vaultPath, id, name);
@@ -128,7 +135,7 @@ export async function syncProjectFiles(vaultPath, id, name) {
               folder,
               ext,
               size_bytes: info.size,
-              app: FOLDER_APP[folder] || 'Explorer',
+              app: _appForFolder(folder),
               created_at: info.mtime ? new Date(info.mtime).toLocaleDateString() : new Date().toLocaleDateString(),
             });
             continue;
@@ -147,7 +154,7 @@ export async function syncProjectFiles(vaultPath, id, name) {
                 subfolder: sub.name,
                 ext,
                 size_bytes: info.size,
-                app: FOLDER_APP[folder] || 'Explorer',
+                app: _appForFolder(folder),
                 created_at: info.mtime ? new Date(info.mtime).toLocaleDateString() : new Date().toLocaleDateString(),
               });
             }
@@ -165,7 +172,7 @@ export async function syncProjectFiles(vaultPath, id, name) {
             folder,
             ext,
             size_bytes: info.size,
-            app: FOLDER_APP[folder] || 'Explorer',
+            app: _appForFolder(folder),
             created_at: info.mtime ? new Date(info.mtime).toLocaleDateString() : new Date().toLocaleDateString(),
           });
         }

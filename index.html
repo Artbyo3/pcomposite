@@ -216,7 +216,7 @@
   <div class="ssep"></div>
   <div class="si" id="sbCnt">0 projects</div>
   <div class="ssep"></div>
-  <div class="si" style="margin-left:auto;cursor:pointer" onclick="toggleChangelog()" id="versionLabel">PCOMPOSITE v0.0.5</div>
+  <div class="si" style="margin-left:auto;cursor:pointer" onclick="toggleChangelog()" id="versionLabel">PCOMPOSITE v0.0.6</div>
   <div id="changelogCard" class="changelog-card">
     <div class="changelog-hd">
       <span>Changelog</span>
@@ -268,16 +268,7 @@
       </div>
       <div class="fg">
         <label class="fl">Folders to create</label>
-        <div class="fchk">
-          <div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:var(--c-blender)"></div><div class="fcname">blender</div></div>
-          <div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:var(--c-subs)"></div><div class="fcname">subs</div></div>
-          <div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:var(--c-unity)"></div><div class="fcname">unity</div></div>
-          <div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:var(--c-fbx)"></div><div class="fcname">fbx</div></div>
-          <div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:var(--c-pictures)"></div><div class="fcname">pictures</div></div>
-          <div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:var(--c-promo)"></div><div class="fcname">promo art</div></div>
-          <div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:var(--c-resonite)"></div><div class="fcname">resonite</div></div>
-          <div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:var(--c-export)"></div><div class="fcname">export</div></div>
-        </div>
+        <div class="fchk" id="folderCheckList"></div>
       </div>
     </div>
     <div class="mfoot">

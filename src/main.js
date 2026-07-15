@@ -26,7 +26,7 @@ import { refreshFolders, renderFolders, drillFolder } from './folders.js';
 import { saveSessionNote, renderChecklist, toggleCk, logAction, renderLog } from './checklist.js';
 import { loadProjects, renderProjects, selectProject, saveActiveProject } from './projects.js';
 import { renderFileList, setFileView as setFileViewFn, goBackFolders,
-  createBlendFile, openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile,
+  openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile,
   showCtx, removeCtx } from './files.js';
 import { addExport, saveExport, toggleFinalExport, deleteExport, deleteExportGroup } from './exports.js';
 import { openGallery, closeGallery, setGalleryFilter, setGalleryView, renderGallery, renderGalleryCalendar,
@@ -105,7 +105,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { removeCtx(
 Object.assign(window, {
   renderPipeline, setPipe, renderFolders, refreshFolders, drillFolder, saveSessionNote,
   renderFileList, setFileView: setFileViewFn, goBackFolders,
-  openFile, revealFile, copyPath, deleteFile, showCtx, removeCtx, createBlendFile,
+  openFile, revealFile, copyPath, deleteFile, showCtx, removeCtx,
   showToast, logAction, renderLog,
   renderChecklist, toggleCk,
   renderProjects, selectProject, refreshInfoPanel,

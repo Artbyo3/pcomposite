@@ -25,7 +25,10 @@ async function pickImage() {
     const bytes = await readFile(selected);
     const ext = selected.split('.').pop().toLowerCase();
     const mime = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', webp:'image/webp', gif:'image/gif', bmp:'image/bmp', svg:'image/svg+xml' }[ext] || 'image/png';
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+    const u8 = new Uint8Array(bytes);
+    let bin = '';
+    for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode(...u8.subarray(i, i + 8192));
+    const b64 = btoa(bin);
     const dataUrl = `data:${mime};base64,${b64}`;
     projects[thumbTargetIdx].thumb = dataUrl;
     renderProjects();

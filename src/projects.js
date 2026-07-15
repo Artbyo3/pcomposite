@@ -1,6 +1,5 @@
 import { join } from '@tauri-apps/api/path';
-import { escapeHTML, formatBytes, sanitizeProjectId, isStreamerMode } from './helpers.js';
-import { FOLDERS, FOLDER_META, PIPELINE, CHECKLIST } from './constants.js';
+import { escapeHTML, formatBytes, sanitizeProjectId, isStreamerMode, getToolFolders, getFolderMeta, getPipelineLength, getStageIcon, getStageColor } from './helpers.js';
 import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, setCurrentFolder, currentSort, activeFilters } from './state.js';
 import { loadProject, saveProject, syncProjectFiles, scanVault } from './data.js';
 import { showToast, setVTab } from './ui.js';
@@ -13,6 +12,7 @@ import { writeBridgeContext } from './bridge.js';
 async function saveActiveProject() {
   const p = projects.find(x => x.active);
   if (!p || !globalSettings.root_path) return;
+  const checklistItems = window._currentChecklist || [];
   const data = {
     id: p.id,
     name: p.name,
@@ -21,7 +21,7 @@ async function saveActiveProject() {
     thumb: p.thumb,
     release_date: p.release_date || null,
     files: ALL_FILES.map(f => ({ name: f.name, folder: f.folder, ext: f.ext, size_bytes: f.sizeBytes, app: f.app, created_at: f.date })),
-    checklist: CHECKLIST.map(c => ({ label: c.l, done: c.done })),
+    checklist: checklistItems.map(c => ({ label: c.name, done: c.done })),
     note: sessionNote,
     exports: window._currentExports || [],
     imported_bases: window._importedBases || [],
@@ -37,11 +37,12 @@ async function loadProjects() {
 
 function renderProjects() {
   const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const pipeLen = getPipelineLength();
   let filtered = projects.filter(p => {
     const matchQ = p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
     const matchFilter = activeFilters.size === 0
-      || (activeFilters.has('wip')  && p.stage < PIPELINE.length)
-      || (activeFilters.has('done') && p.stage >= PIPELINE.length);
+      || (activeFilters.has('wip')  && p.stage < pipeLen)
+      || (activeFilters.has('done') && p.stage >= pipeLen);
     return matchQ && matchFilter;
   });
 
@@ -63,7 +64,7 @@ function renderProjects() {
         <div class="pc-bot">
           <span class="pc-date">${p.date}</span>
           <div class="fmini">
-            ${FOLDERS.map((f, fi) => `<div class="fmd ${fi < p.stage ? 'has' : ''}" style="background:${f.color}"></div>`).join('')}
+            ${getToolFolders().map((f, fi) => `<div class="fmd ${fi < p.stage ? 'has' : ''}" style="background:${f.color}"></div>`).join('')}
           </div>
         </div>
       </div>
@@ -87,8 +88,7 @@ async function selectProject(i) {
   const p = projects[i];
   setProjectLog([]);
 
-  // Reset checklist state before loading new project's data
-  CHECKLIST.forEach(c => c.done = false);
+  window._currentChecklist = [];
   setSessionNote('');
 
   try {
@@ -106,21 +106,26 @@ async function selectProject(i) {
     for (const f of jsonFiles) {
       const key = f.folder + '/' + f.name;
       seen.add(key);
-      const meta = FOLDER_META[f.folder] || { color: 'var(--text3)', icon: '📄' };
+      const meta = getFolderMeta(f.folder);
       ALL_FILES.push({ name: f.name, folder: f.folder, ext: f.ext, size: formatBytes(f.size_bytes), sizeBytes: f.size_bytes, date: f.created_at, app: f.app, icon: meta.icon, ec: meta.color, _path: projectDir ? projectDir + '/' + f.folder + '/' + f.name : '' });
     }
     for (const f of diskFiles) {
       const key = f.folder + '/' + f.name;
       if (seen.has(key)) continue;
       seen.add(key);
-      const meta = FOLDER_META[f.folder] || { color: 'var(--text3)', icon: '📄' };
+      const meta = getFolderMeta(f.folder);
       ALL_FILES.push({ name: f.name, folder: f.folder, ext: f.ext, size: formatBytes(f.size_bytes), sizeBytes: f.size_bytes, date: f.created_at, app: f.app, icon: meta.icon, ec: meta.color, _path: projectDir ? projectDir + '/' + f.folder + '/' + f.name : '' });
     }
 
     if (data) {
-      (data.checklist || []).forEach(row => {
-        const c = CHECKLIST.find(c => c.l === row.label);
-        if (c) c.done = row.done;
+      const stages = globalSettings.pipelineStages || [];
+      let savedChecklist = (data.checklist || []).map(item => ({
+        label: ({'Blender done':'Blender','Painter done':'Painter','Unity done':'Unity','Package ready':'Package','Uploaded':'Upload'})[item.label] || item.label,
+        done: item.done
+      }));
+      window._currentChecklist = stages.map(s => {
+        const saved = savedChecklist.find(c => c.label === s.name);
+        return { name: s.name, icon: getStageIcon(s), color: s.color || '#888', done: saved ? saved.done : false };
       });
       setSessionNote(data.note || '');
       // Migrate exports: add version field if missing (auto-number within each target)

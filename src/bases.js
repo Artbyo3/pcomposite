@@ -13,13 +13,15 @@ import { getCurrentWebview } from '@tauri-apps/api/webview';
 let _currentGroup = null;
 let _backOnEscape = null;
 const COVER_EXTS = ['.png', '.jpg', '.jpeg', '.webp'];
-const BASE_EXT_COLORS = {
-  blend: 'var(--c-blender)',
-  fbx:   'var(--c-fbx)',
-  obj:   'var(--c-subs)',
-  glb:   'var(--c-export)',
-  gltf:  'var(--c-export)',
-};
+function _extColor(extRaw) {
+  const map = { blend:'Blender', fbx:'FBX Exports', obj:'FBX Exports', glb:'Export', gltf:'Export' };
+  const name = map[extRaw];
+  if (name) {
+    const t = (globalSettings.tools || []).find(x => x.name === name);
+    if (t && t.color) return t.color;
+  }
+  return 'var(--text3)';
+}
 
 async function basesDir() {
   return await join(globalSettings.root_path, '_bases');
@@ -306,7 +308,7 @@ async function openGroup(group) {
     rightHtml = files.map((f, i) => {
       const extRaw = f.name.includes('.') ? f.name.split('.').pop().toLowerCase() : '';
       const ext = extRaw ? '.' + extRaw.toUpperCase() : '';
-      const ec = BASE_EXT_COLORS[extRaw] || 'var(--text3)';
+      const ec = _extColor(extRaw);
       const isImported = (window._importedBases || []).some(ib => ib.file === f.name && ib.group === group);
       const escapedGroup = escapeHTML(group).replace(/'/g, "\\'");
       const escapedName = escapeHTML(f.name).replace(/'/g, "\\'");

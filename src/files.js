@@ -1,5 +1,4 @@
-import { escapeHTML, isViewableImage, loadThumbnail } from './helpers.js';
-import { FOLDERS, APP_ICONS } from './constants.js';
+import { escapeHTML, isViewableImage, loadThumbnail, getToolFolders, toolHasCapability, getToolByFolderKey, getAppIcon } from './helpers.js';
 import { ALL_FILES, currentFolder, fileView, setCurrentFolder, setFileView as setFileViewState, ctxEl, setCtxEl, projects, globalSettings } from './state.js';
 import { join } from '@tauri-apps/api/path';
 import { invoke } from '@tauri-apps/api/core';
@@ -14,12 +13,13 @@ import { refreshFolders } from './folders.js';
 
 function renderFileList(filterKey) {
   const files  = filterKey ? ALL_FILES.filter(f => f.folder === filterKey) : ALL_FILES;
-  const folder = FOLDERS.find(f => f.key === filterKey);
+  const folder = getToolFolders().find(f => f.key === filterKey);
   const cls    = filterKey ? 'no-folder' : 'with-folder';
-  const isFbx  = filterKey === 'fbx';
+  const hasFbxVer = filterKey ? toolHasCapability(filterKey, 'fbx_versioning') : false;
+  const hasCreate = filterKey ? toolHasCapability(filterKey, 'create_file') : false;
 
-  if (isFbx) { writeBridgeContext(); }
-  const exportSection = isFbx ? buildExportSection() : '';
+  if (hasFbxVer) { writeBridgeContext(); }
+  const exportSection = hasFbxVer ? buildExportSection() : '';
   const toolbar = `
     <div class="file-toolbar">
       <div class="file-breadcrumb">
@@ -35,8 +35,8 @@ function renderFileList(filterKey) {
         <span style="color:var(--text3);font-size:8px;margin-left:4px">— ${files.length} item${files.length !== 1 ? 's' : ''}</span>
       </div>
       <div class="file-toolbar-right">
-        ${isFbx ? '<input id="fileFilter" class="file-filter-input" placeholder="filter files..." oninput="filterFileList(this.value)">' : ''}
-        ${filterKey === 'blender' ? `<button class="btn-blend" onclick="createBlendFile()" title="Create a new .blend file">+ New</button>` : ''}
+        ${hasFbxVer ? '<input id="fileFilter" class="file-filter-input" placeholder="filter files..." oninput="filterFileList(this.value)">' : ''}
+        ${hasCreate ? `<button class="btn-create" style="background:${folder?.color || 'var(--accent)'}" onclick="createFile('${filterKey}')" title="Create a new file">+ New</button>` : ''}
         <div class="view-toggle">
           <button class="vt-btn ${fileView === 'list' ? 'on' : ''}" onclick="setFileView('list')" title="List view">≡</button>
           <button class="vt-btn ${fileView === 'grid' ? 'on' : ''}" onclick="setFileView('grid')" title="Grid view">⊞</button>
@@ -69,9 +69,9 @@ function renderFileList(filterKey) {
 
   const indices = files.map(f => ALL_FILES.indexOf(f));
 
-  // Build a lookup of which exports own which files (for fbx folder)
+  // Build a lookup of which exports own which files (for versioned export folders)
   const fileToExport = {};
-  if (filterKey === 'fbx') {
+  if (hasFbxVer) {
     const exps = window._currentExports || [];
     for (const ex of exps) if (ex.fileNames) for (const fn of ex.fileNames) fileToExport[fn] = ex.target;
   }
@@ -90,7 +90,7 @@ function renderFileList(filterKey) {
       <span class="fr-sz">${f.size}</span>
       <span class="fr-dt">${f.date}</span>
       <div class="fr-open-btn" onclick="event.stopPropagation();openFile(${indices[fi]})" title="Open in ${f.app}">
-        <span style="font-size:11px">${APP_ICONS[f.app] || '📄'}</span>
+        <span style="font-size:11px">${getAppIcon(f.app)}</span>
         <span>Open in ${f.app}</span>
       </div>
     </div>
@@ -135,45 +135,56 @@ function goBackFolders() {
   setVTab(null, 'folders');
 }
 
-async function createBlendFile() {
+window.createFile = async function(folderKey) {
   const p = projects.find(x => x.active);
   if (!p) { showToast('No active project', 'var(--red)'); return; }
-  if (!globalSettings.blender_path) { showToast('Set Blender path in Settings first', 'var(--red)'); return; }
+  const tool = getToolByFolderKey(folderKey);
+  if (!tool) { showToast('No tool for this folder', 'var(--red)'); return; }
 
   const projectDir = await join(globalSettings.root_path, p.id + '_' + p.name);
-  const blenderDir  = await join(projectDir, 'blender');
-  if (!(await exists(blenderDir))) await mkdir(blenderDir, { recursive: true });
+  const targetDir  = await join(projectDir, tool.folder_key);
+  if (!(await exists(targetDir))) await mkdir(targetDir, { recursive: true });
+
+  // Determine exe path: tool's exe_path or fallback by tool name
+  const toolExe = tool.exe_path || {
+    Blender: globalSettings.blender_path,
+    'Substance Painter': globalSettings.painter_path,
+    Unity: globalSettings.unity_path
+  }[tool.name] || '';
+
+  if (!toolExe) { showToast('No executable set for ' + tool.name + ' in Settings', 'var(--red)'); return; }
 
   // Pick an untitled name that doesn't collide
   let name = 'untitled';
-  let blendPath = await join(blenderDir, name + '.blend');
+  let ext = '.blend';
+  let filePath = await join(targetDir, name + ext);
   let counter = 1;
-  while (await exists(blendPath)) {
-    blendPath = await join(blenderDir, name + '-' + counter + '.blend');
+  while (await exists(filePath)) {
+    filePath = await join(targetDir, name + '-' + counter + ext);
     counter++;
   }
 
   try {
-    // Create the .blend file via Blender headless
-    const escapedPath = blendPath.replace(/\\/g, '\\\\');
-    await invoke('run_command', {
-      exePath: globalSettings.blender_path,
-      args: ['--background', '--python-expr',
-        'import bpy; bpy.ops.wm.save_mainfile(filepath="' + escapedPath + '")'],
-    });
-  } catch (e) { showToast('Error creating .blend: ' + String(e), 'var(--red)'); return; }
+    // Create file using tool's capabilities; default to Blender headless for .blend
+    const escapedPath = filePath.replace(/\\/g, '\\\\');
+    if (tool.name === 'Blender') {
+      await invoke('run_command', {
+        exePath: toolExe,
+        args: ['--background', '--python-expr',
+          'import bpy; bpy.ops.wm.save_mainfile(filepath="' + escapedPath + '")'],
+      });
+      await invoke('open_in_app', { exePath: toolExe, filePath });
+    } else {
+      await invoke('open_in_app', { exePath: toolExe, filePath: targetDir });
+    }
+  } catch (e) { showToast('Error creating file: ' + String(e), 'var(--red)'); return; }
 
-  // Open Blender with the new file
-  try { await invoke('open_in_app', { exePath: globalSettings.blender_path, filePath: blendPath }); }
-  catch { /* ignore */ }
+  logAction('Created ' + name + ext, 'ok');
+  showToast('Created ' + name + ext, 'var(--green)');
 
-  logAction('Created ' + name + '.blend', 'ok');
-  showToast('Created ' + name + '.blend', 'var(--green)');
-
-  // Re-sync to pick up the new file
   const idx = projects.indexOf(p);
   if (idx !== -1) await selectProject(idx);
-}
+};
 
 async function openFile(idx) {
   const f = ALL_FILES[idx];
@@ -297,7 +308,7 @@ function showCtx(e, idx) {
   menu.style.top  = e.clientY + 'px';
   menu.innerHTML = `
     <div class="ctx-item primary" onclick="openFile(${idx});removeCtx()">
-      <span class="ctx-ico">${APP_ICONS[f.app] || '📄'}</span> Open in ${f.app}
+      <span class="ctx-ico">${getAppIcon(f.app)}</span> Open in ${f.app}
     </div>
     <div class="ctx-sep"></div>
     <div class="ctx-item" onclick="revealFile(${idx});removeCtx()">
@@ -331,4 +342,4 @@ window.filterFileList = function(val) {
   if (cnt) cnt.textContent = '— ' + visible + ' of ' + rows.length + ' items';
 };
 
-export { renderFileList, setFileView, goBackFolders, createBlendFile, openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile, showCtx, removeCtx }
+export { renderFileList, setFileView, goBackFolders, openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile, showCtx, removeCtx }

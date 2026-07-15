@@ -69,3 +69,85 @@ export function sanitizeProjectId(id, fallback) {
 export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
+
+// ── TOOL / FOLDER HELPERS (replaces FOLDERS constant) ──
+
+const OFFICIAL_TOOL_ICONS = {
+  Blender: '<img src="/blender.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
+  'Substance Painter': '<img src="/substance-3d-painter.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
+  Unity: '<img src="/Unity.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
+  'FBX Exports': '<span style="font-size:1em">📦</span>',
+  Pictures: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-0.15em;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
+  'Promo Art': '<span style="font-size:1em">🖼️</span>',
+  Resonite: '<img src="/RSN_Logomark_Color.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
+  Export: '<span style="font-size:1em">🚀</span>',
+};
+
+function _firstLetterIcon(name) {
+  const letter = (name || '?')[0].toUpperCase();
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:1em;height:1em;background:var(--bg3);border-radius:3px;font-size:11px;font-weight:700;color:var(--text2);line-height:1;vertical-align:-0.15em">${letter}</span>`;
+}
+
+export function getToolIcon(tool) {
+  if (!tool) return '<span style="font-size:1em">📁</span>';
+  return OFFICIAL_TOOL_ICONS[tool.name] || _firstLetterIcon(tool.name);
+}
+
+export function getFolderMeta(folderKey) {
+  const tools = globalSettings.tools || [];
+  const tool = tools.find(t => t.folder_key === folderKey);
+  return { color: tool?.color || 'var(--text3)', icon: getToolIcon(tool) };
+}
+
+export function getToolFolders() {
+  return (globalSettings.tools || []).map(t => ({
+    key: t.folder_key,
+    icon: getToolIcon(t),
+    color: t.color || 'var(--text3)',
+    name: t.name,
+    files: 0,
+    size: '-',
+    pct: 0,
+    _bytes: 0,
+  }));
+}
+
+export function getStageIcon(stage) {
+  if (!stage) return '<span style="font-size:1em">📋</span>';
+  const tools = globalSettings.tools || [];
+  const tool = tools.find(t => t.id === stage.tool_id);
+  return tool ? getToolIcon(tool) : '<span style="font-size:1em">📋</span>';
+}
+
+export function getStageColor(stage) {
+  return stage?.color || 'var(--text3)';
+}
+
+const APP_ICON_MAP = {
+  Blender: '<img src="/blender.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
+  Painter: '<img src="/substance-3d-painter.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
+  Unity:   '<img src="/Unity.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
+  Viewer: '<span style="font-size:1em">🖼️</span>',
+  Explorer: '<span style="font-size:1em">📂</span>',
+};
+
+export function getAppIcon(appName) {
+  return APP_ICON_MAP[appName] || '<span style="font-size:1em">📄</span>';
+}
+
+export function getToolByFolderKey(folderKey) {
+  return (globalSettings.tools || []).find(t => t.folder_key === folderKey) || null;
+}
+
+export function toolHasCapability(folderKey, cap) {
+  const tool = getToolByFolderKey(folderKey);
+  return tool ? (tool.capabilities || []).includes(cap) : false;
+}
+
+export function getPipelineLength() {
+  return (globalSettings.pipelineStages || []).length;
+}
+
+export function getStageLabel(stage) {
+  return stage?.name || '';
+}

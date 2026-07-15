@@ -1,5 +1,4 @@
-import { formatBytes } from './helpers.js';
-import { FOLDERS, PIPELINE, CHECKLIST } from './constants.js';
+import { formatBytes, getToolFolders, getPipelineLength, getStageLabel, getStageColor, getStageIcon, getToolByFolderKey } from './helpers.js';
 import { ALL_FILES, projects, globalSettings, setCurrentSort, activeFilters, currentFolder } from './state.js';
 import { join, basename, extname } from '@tauri-apps/api/path';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
@@ -20,7 +19,16 @@ function showToast(msg, color = 'var(--accent)') {
 }
 
 // ── MODAL ──
-function openModal()  { document.getElementById('overlay').classList.add('open'); setTimeout(() => document.getElementById('nName').focus(), 200); }
+function openModal() {
+  document.getElementById('overlay').classList.add('open');
+  const container = document.getElementById('folderCheckList');
+  if (container) {
+    container.innerHTML = getToolFolders().map(f =>
+      `<div class="fci on" onclick="toggleFci(this)"><div class="fcbox">✓</div><div class="fcdot" style="background:${f.color}"></div><div class="fcname">${f.key}</div></div>`
+    ).join('');
+  }
+  setTimeout(() => document.getElementById('nName').focus(), 200);
+}
 function closeModal() { document.getElementById('overlay').classList.remove('open'); }
 function closeOvOut(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
 function toggleFci(el) { el.classList.toggle('on'); el.querySelector('.fcbox').textContent = el.classList.contains('on') ? '✓' : ''; }
@@ -31,7 +39,7 @@ async function createProject() {
 
   // Read which folders are checked in the modal
   const checkedFolders = [...document.querySelectorAll('.fchk .fci.on .fcname')].map(el => el.textContent.trim());
-  const foldersToCreate = FOLDERS.filter(f => checkedFolders.includes(f.key));
+  const foldersToCreate = getToolFolders().filter(f => checkedFolders.includes(f.key));
   if (!foldersToCreate.length) { showToast('Select at least one folder', 'var(--orange)'); return; }
   if (!globalSettings.root_path) { showToast('Set Root Path in settings first', 'var(--orange)'); return; }
 
@@ -45,11 +53,12 @@ async function createProject() {
       const fp = await join(projectDir, f.key);
       if (!(await exists(fp))) await mkdir(fp, { recursive: true });
     }
+    const stages = globalSettings.pipelineStages || [];
     const projectData = {
       id, name, date: dateStr, stage: 1, thumb: null,
       release_date: null,
       files: [],
-      checklist: CHECKLIST.map(c => ({ label: c.l, done: false })),
+      checklist: stages.map(s => ({ label: s.name, done: false })),
       note: '',
     };
     await saveProject(globalSettings.root_path, projectData);
@@ -103,23 +112,26 @@ function refreshInfoPanel() {
   const p = projects.find(x => x.active);
   if (!p) return;
 
-  // Stage label
-  const stageIdx = Math.max(0, Math.min(p.stage - 1, PIPELINE.length - 1));
+  const stages = globalSettings.pipelineStages || [];
+  const pipeLen = stages.length;
+  const stageIdx = Math.max(0, Math.min(p.stage - 1, pipeLen - 1));
   const stageEl  = document.getElementById('piStage');
   if (stageEl) {
-    stageEl.textContent = PIPELINE[stageIdx]?.label + ' (' + p.stage + '/' + PIPELINE.length + ')';
-    stageEl.className   = 'iv ' + (p.stage >= PIPELINE.length ? 'ok' : 'warn');
+    const sl = getStageLabel(stages[stageIdx]);
+    stageEl.textContent = (sl || '?') + ' (' + p.stage + '/' + pipeLen + ')';
+    stageEl.className   = 'iv ' + (p.stage >= pipeLen ? 'ok' : 'warn');
   }
 
   // Pipeline % (setPipe owns ppct/pfill; sync here too for initial load)
-  const pipePct = Math.round(((stageIdx) / (PIPELINE.length - 1)) * 100);
+  const pipePct = pipeLen > 1 ? Math.round(((stageIdx) / (pipeLen - 1)) * 100) : 0;
   const ppct = document.getElementById('ppct');
   const pfill = document.getElementById('pfill');
   if (ppct) ppct.textContent = pipePct + '%';
   if (pfill) pfill.style.width = pipePct + '%';
 
-  const ckDone  = CHECKLIST.filter(c => c.done).length;
-  const ckTotal = CHECKLIST.length;
+  const ckItems = window._currentChecklist || [];
+  const ckDone  = ckItems.filter(c => c.done).length;
+  const ckTotal = ckItems.length;
   const ckPct   = ckTotal > 0 ? Math.round((ckDone / ckTotal) * 100) : 0;
 
   const folderStats = {};
@@ -128,8 +140,9 @@ function refreshInfoPanel() {
     folderStats[f.folder].count++;
     folderStats[f.folder].bytes += (f.sizeBytes || 0);
   });
+  const folders = getToolFolders();
   const populated  = Object.values(folderStats).filter(s => s.count > 0).length;
-  const totalFolders = FOLDERS.length;
+  const totalFolders = folders.length;
   const folderPct  = totalFolders > 0 ? Math.round((populated / totalFolders) * 100) : 0;
   const totalBytes = ALL_FILES.reduce((sum, f) => sum + (f.sizeBytes || 0), 0);
 
@@ -147,13 +160,13 @@ function refreshInfoPanel() {
 
   const storageRows = document.getElementById('piStorageRows');
   if (storageRows) {
-    storageRows.innerHTML = FOLDERS.map(f => {
+    storageRows.innerHTML = folders.map(f => {
       const stats = folderStats[f.key];
       return `<div class="irow"><span class="ik">${f.key}/</span><span class="iv ${stats ? '' : 'warn'}">${stats ? formatBytes(stats.bytes) : '— empty'}</span></div>`;
     }).join('');
   }
 
-  document.getElementById('fhgrid').innerHTML = FOLDERS.slice(0, 6).map(f => {
+  document.getElementById('fhgrid').innerHTML = folders.slice(0, 6).map(f => {
     const stats = folderStats[f.key] || { count: 0, bytes: 0 };
     return `<div class="fhcard" onclick="drillFolder('${f.key}')"><div class="fh-n">${f.key}/</div><div class="fh-v" style="color:${f.color}">${stats.count}</div><div class="fh-s">${stats.count > 0 ? formatBytes(stats.bytes) : 'empty'}</div></div>`;
   }).join('');
@@ -263,13 +276,18 @@ async function collectFilesRecursive(dirPath) {
   return files;
 }
 
+function _fk(name) {
+  const t = (globalSettings.tools || []).find(x => x.name === name);
+  return t ? t.folder_key : '';
+}
 function destFolderForExt(lowerExt) {
-  if (lowerExt === '.blend' || /^\.blend\d+$/.test(lowerExt)) return 'blender';
-  if (lowerExt === '.spp') return 'subs';
-  if (['.png','.jpg','.jpeg','.tga','.exr'].includes(lowerExt)) return 'pictures';
-  if (['.fbx','.obj'].includes(lowerExt)) return 'fbx';
-  if (['.mat','.unity','.prefab','.cs','.meta'].includes(lowerExt)) return 'unity';
-  return 'export';
+  if (lowerExt === '.blend' || /^\.blend\d+$/.test(lowerExt)) return _fk('Blender') || 'blender';
+  if (lowerExt === '.spp') return _fk('Substance Painter') || 'subs';
+  if (['.png','.jpg','.jpeg','.tga','.exr'].includes(lowerExt)) return _fk('Pictures') || 'pictures';
+  if (['.fbx','.obj'].includes(lowerExt)) return _fk('FBX Exports') || 'fbx';
+  if (['.mat','.unity','.prefab','.cs','.meta'].includes(lowerExt)) return _fk('Unity') || 'unity';
+  const fallback = (globalSettings.tools || []).find(t => (t.capabilities || []).includes('open_file'));
+  return fallback ? fallback.folder_key : 'export';
 }
 
 export { showToast, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop }

@@ -172,3 +172,127 @@
 .naming-preview::before {
   content:'Preview: '; font-weight:700; color:var(--text3);
 }
+
+/* ── TOOLS & PIPELINE (workflow) ── */
+.wf-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:8px;
+  background:var(--bg); border:1px solid var(--border);
+  margin-bottom:5px; transition:border-color .15s, box-shadow .15s;
+  position:relative;
+}
+.wf-item:hover { border-color:var(--border2); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.wf-reorder {
+  display:flex; flex-direction:column; gap:2px; flex-shrink:0;
+}
+.wf-reorder button {
+  width:18px; height:13px; padding:0; border:1px solid transparent; background:var(--bg3);
+  color:var(--text4); cursor:pointer; font-size:6px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .12s; border-radius:3px; opacity:.5;
+}
+.wf-reorder button:hover { opacity:1; color:var(--text2); border-color:var(--border); background:var(--bg); }
+.wf-color {
+  width:20px; height:20px; border-radius:5px; flex-shrink:0;
+  border:1px solid rgba(0,0,0,.15); box-shadow:inset 0 1px 2px rgba(0,0,0,.1);
+}
+.wf-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.wf-name { font-size:12px; font-weight:700; color:var(--text); line-height:1.3; }
+.wf-meta { font-size:8px; font-family:'Space Mono',monospace; color:var(--text3); line-height:1.4; }
+.wf-tier {
+  font-size:7px; font-family:'Space Mono',monospace; font-weight:700; letter-spacing:.8px;
+  padding:3px 8px; border-radius:5px; flex-shrink:0; text-transform:uppercase;
+}
+.wf-tier.official { color:var(--green); background:rgba(61,220,132,.1); border:1px solid rgba(61,220,132,.15); }
+.wf-tier.custom { color:var(--text3); background:var(--bg3); border:1px solid var(--border); }
+.wf-actions { display:flex; gap:4px; flex-shrink:0; margin-left:4px; }
+.wf-btn {
+  width:28px; height:28px; padding:0; border:1px solid var(--border); background:var(--bg3);
+  color:var(--text4); cursor:pointer; font-size:11px; line-height:1;
+  display:flex; align-items:center; justify-content:center; border-radius:6px;
+  transition:all .12s; opacity:.7;
+}
+.wf-btn:hover { opacity:1; color:var(--text); background:var(--bg); border-color:var(--border2); }
+.wf-btn.danger { color:var(--text4); }
+.wf-btn.danger:hover { opacity:1; color:var(--red); border-color:var(--red); background:rgba(255,77,106,.06); }
+.wf-tag {
+  font-size:7px; font-family:'Space Mono',monospace; color:var(--text3);
+  background:var(--bg3); padding:2px 8px; border-radius:4px; flex-shrink:0;
+  border:1px solid var(--border); letter-spacing:.3px;
+}
+.wf-add-area { margin-top:8px; }
+.wf-add-area .set-btn {
+  background:var(--bg3); border-style:dashed; border-color:var(--border2);
+  font-weight:700; letter-spacing:1.5px; padding:10px 0;
+}
+.wf-add-area .set-btn:hover { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+
+/* Color palette grid */
+.wf-palette {
+  display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;
+}
+.wf-palette-item {
+  width:28px; height:28px; border-radius:6px; cursor:pointer;
+  border:2px solid transparent; transition:all .12s; flex-shrink:0;
+  box-shadow:0 1px 3px rgba(0,0,0,.15);
+}
+.wf-palette-item:hover { transform:scale(1.18); z-index:1; }
+.wf-palette-item.active { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.2); transform:scale(1.1); }
+
+/* Workflow form modal */
+.wf-overlay {
+  position:fixed; inset:0; z-index:1000;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.65); backdrop-filter:blur(6px);
+  animation:fadeUp .12s ease;
+}
+.wf-form {
+  background:var(--bg2); border:1px solid var(--border2); border-radius:14px;
+  width:440px; max-height:90vh; overflow-y:auto;
+  box-shadow:0 32px 80px rgba(0,0,0,.55);
+  display:flex; flex-direction:column;
+}
+.wf-form-hd {
+  display:flex; align-items:center; gap:8px; padding:18px 20px 14px;
+  border-bottom:1px solid var(--border);
+}
+.wf-form-title { font-size:15px; font-weight:800; flex:1; letter-spacing:-.2px; }
+.wf-form-close {
+  width:30px; height:30px; background:none; border:1px solid var(--border);
+  border-radius:7px; color:var(--text3); cursor:pointer; font-size:13px;
+  display:flex; align-items:center; justify-content:center; transition:all .12s;
+}
+.wf-form-close:hover { background:var(--bg4); color:var(--text); border-color:var(--border2); }
+.wf-form-body { padding:16px 20px; flex:1; display:flex; flex-direction:column; gap:12px; }
+.wf-form-body .fg { margin:0; }
+.wf-form-body .fl {
+  font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--text3); margin-bottom:5px; font-weight:600;
+}
+.wf-form-body .fi {
+  font-size:12px; padding:8px 10px; border-radius:6px;
+  background:var(--bg); border:1px solid var(--border);
+  color:var(--text); width:100%; outline:none; transition:border-color .12s;
+}
+.wf-form-body .fi:focus { border-color:var(--accent); }
+.wf-form-body .fi[readonly] { background:var(--bg3); color:var(--text3); cursor:default; }
+.wf-form-body select.fi {
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7a90'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center; padding-right:28px;
+  cursor:pointer;
+}
+.wf-form-ft {
+  display:flex; gap:8px; padding:14px 20px 18px;
+  border-top:1px solid var(--border); justify-content:flex-end;
+}
+.wf-form-ft .btn-sec, .wf-form-ft .btn-pri {
+  padding:8px 20px; border-radius:8px; font-family:'Space Mono',monospace;
+  font-size:9px; font-weight:700; letter-spacing:1px; cursor:pointer; transition:all .12s;
+  border:1px solid var(--border); background:var(--bg3); color:var(--text);
+}
+.wf-form-ft .btn-pri {
+  background:var(--accent); color:var(--bg); border-color:var(--accent);
+}
+.wf-form-ft .btn-sec:hover { border-color:var(--border2); background:var(--bg); }
+.wf-form-ft .btn-pri:hover { filter:brightness(1.15); }

@@ -1,6 +1,6 @@
 import { projects, ALL_FILES, sessionNote, globalSettings, galCalView, setGalCalView, galCalYear, setGalCalYear, galCalMonth, setGalCalMonth, galCalDay, setGalCalDay, _galCalDateTarget, setGalCalDateTarget, galleryFilter, setGalleryFilter as setGalleryFilterState, galleryView, setGalleryView as setGalleryViewState } from './state.js';
-import { escapeHTML, getDateStr, sanitizeProjectId } from './helpers.js';
-import { FOLDERS, PIPELINE, MONTH_NAMES, DAY_NAMES_SHORT, CHECKLIST } from './constants.js';
+import { escapeHTML, getDateStr, sanitizeProjectId, getToolFolders, getPipelineLength, getStageLabel, getStageColor } from './helpers.js';
+import { MONTH_NAMES, DAY_NAMES_SHORT } from './constants.js';
 import { saveProject } from './data.js';
 import { showToast } from './ui.js';
 import { selectProject } from './projects.js';
@@ -39,7 +39,8 @@ function getFilteredProjects() {
   const q = (document.getElementById('gallerySearch').value || '').toLowerCase();
   return projects.filter(p => {
     const matchQ = p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
-    const matchF = galleryFilter === 'all' || (galleryFilter === 'done' && p.stage >= PIPELINE.length) || (galleryFilter === 'wip' && p.stage < PIPELINE.length);
+    const pipeLen = getPipelineLength();
+    const matchF = galleryFilter === 'all' || (galleryFilter === 'done' && p.stage >= pipeLen) || (galleryFilter === 'wip' && p.stage < pipeLen);
     return matchQ && matchF;
   });
 }
@@ -64,8 +65,10 @@ function calItemHtml(pi) {
 
 function unscheduledItemHtml(pi) {
   const pp = projects[pi];
-  const stageLabel = ['Blender','Painter','Unity','Package','Upload'][Math.min(pp.stage-1,4)] || '';
-  const stageColor = ['var(--c-blender)','var(--c-subs)','var(--c-unity)','var(--c-fbx)','var(--c-export)'][Math.min(pp.stage-1,4)] || '';
+  const stages = globalSettings.pipelineStages || [];
+  const s = stages[Math.min(pp.stage - 1, stages.length - 1)] || {};
+  const stageLabel = getStageLabel(s);
+  const stageColor = getStageColor(s);
   return `<div class="us-card" title="${escapeHTML(pp.name)}">
     <div class="us-thumb" onclick="openFromGallery(${pi})">
       ${pp.thumb ? `<img src="${pp.thumb}">` : `<div class="us-thumb-ph">📄</div>`}
@@ -86,8 +89,7 @@ function unscheduledItemHtml(pi) {
 
 function renderGallery() {
   if (galleryView === 'calendar') { renderGalleryCalendar(); return; }
-  const STAGE_COLORS = ['var(--c-blender)', 'var(--c-subs)', 'var(--c-unity)', 'var(--c-fbx)', 'var(--c-export)'];
-  const STAGE_LABELS = ['Blender', 'Painter', 'Unity', 'Package', 'Upload'];
+  const stages = globalSettings.pipelineStages || [];
 
   const filtered = getFilteredProjects();
 
@@ -96,9 +98,11 @@ function renderGallery() {
   if (!filtered.length) { grid.innerHTML = `<div style="grid-column:1/-1;padding:60px;text-align:center;font-size:11px;font-family:'Space Mono',monospace;color:var(--text3)">No projects found</div>`; return; }
 
   grid.innerHTML = filtered.map((p, i) => {
-    const pct        = Math.round(((p.stage - 1) / (PIPELINE.length - 1)) * 100);
-    const stageColor = STAGE_COLORS[Math.min(p.stage - 1, STAGE_COLORS.length - 1)];
-    const stageLabel = STAGE_LABELS[Math.min(p.stage - 1, STAGE_LABELS.length - 1)];
+    const pipeLen = stages.length;
+    const pct     = pipeLen > 1 ? Math.round(((p.stage - 1) / (pipeLen - 1)) * 100) : 0;
+    const s       = stages[Math.min(p.stage - 1, stages.length - 1)] || {};
+    const stageColor = getStageColor(s);
+    const stageLabel = getStageLabel(s);
     const idx = projects.indexOf(p);
     return `
       <div class="gcard ${p.active ? 'active-proj' : ''}" style="animation-delay:${i * .03}s" onclick="openFromGallery(${idx})">
@@ -115,7 +119,7 @@ function renderGallery() {
           </div>
           <div class="g-meta">
             <span class="g-date">${p.date}</span>
-            <div class="g-dots">${FOLDERS.map((f, fi) => `<div class="fmd ${fi < p.stage ? 'has' : ''}" style="background:${f.color};width:5px;height:5px;border-radius:1px"></div>`).join('')}</div>
+            <div class="g-dots">${getToolFolders().map((f, fi) => `<div class="fmd ${fi < p.stage ? 'has' : ''}" style="background:${f.color};width:5px;height:5px;border-radius:1px"></div>`).join('')}</div>
           </div>
         </div>
       </div>
@@ -385,7 +389,7 @@ function saveReleaseDate(p) {
     id: p.id, name: p.name, date: p.date, stage: p.stage, thumb: p.thumb,
     release_date: p.release_date || null,
     files: ALL_FILES.map(f => ({ name: f.name, folder: f.folder, ext: f.ext, size_bytes: f.sizeBytes, app: f.app, created_at: f.date })),
-    checklist: CHECKLIST.map(c => ({ label: c.l, done: c.done })),
+    checklist: (window._currentChecklist || []).map(c => ({ label: c.name, done: c.done })),
     note: sessionNote,
     exports: window._currentExports || [],
   };

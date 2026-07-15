@@ -1,5 +1,4 @@
-import { escapeHTML } from './helpers.js';
-import { CHECKLIST, PIPELINE } from './constants.js';
+import { escapeHTML, getStageIcon, getStageColor, getPipelineLength } from './helpers.js';
 import { sessionNote, setSessionNote, projectLog, projects, globalSettings } from './state.js';
 import { saveActiveProject } from './projects.js';
 import { setPipe } from './pipeline.js';
@@ -18,18 +17,22 @@ function saveSessionNote(value) {
 }
 
 function renderChecklist() {
-  const done   = CHECKLIST.filter(c => c.done).length;
-  const allDone = done === CHECKLIST.length;
+  const items = window._currentChecklist || [];
+  const done   = items.filter(c => c.done).length;
+  const allDone = done === items.length;
+  const stages = globalSettings.pipelineStages || [];
   document.getElementById('checkContent').innerHTML = `
     <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">WHERE YOU LEFT OFF</div>
-    ${CHECKLIST.map((c, i) => `
-      <div onclick="toggleCk(${i})" style="display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:6px;cursor:pointer;border:1px solid ${c.done ? 'var(--border)' : 'var(--border2)'};background:${c.done ? 'var(--bg3)' : 'var(--bg4)'};margin-bottom:6px;transition:all .12s;${!c.done && i === done ? 'border-color:' + c.color + ';box-shadow:0 0 0 1px ' + c.color + '22' : ''}">
-        <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;border:2px solid ${c.done ? 'var(--green)' : (i === done ? c.color : 'var(--border2)')};background:${c.done ? 'var(--green)' : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:9px;color:#000;transition:all .15s;">${c.done ? '✓' : ''}</div>
-        <span style="font-size:13px;line-height:1">${c.icon}</span>
-        <span style="font-size:12px;font-weight:700;flex:1;color:${c.done ? 'var(--text3)' : (i === done ? 'var(--text)' : 'var(--text2)')};text-decoration:${c.done ? 'line-through' : 'none'};">${escapeHTML(c.l)}</span>
-        ${!c.done && i === done ? `<span style="font-size:8px;font-family:'Space Mono',monospace;color:${c.color};letter-spacing:1px">NOW</span>` : ''}
-      </div>
-    `).join('')}
+    ${items.map((c, i) => {
+      const s = stages[i] || {};
+      const color = c.color || getStageColor(s);
+      return `<div onclick="toggleCk(${i})" style="display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:6px;cursor:pointer;border:1px solid ${c.done ? 'var(--border)' : 'var(--border2)'};background:${c.done ? 'var(--bg3)' : 'var(--bg4)'};margin-bottom:6px;transition:all .12s;${!c.done && i === done ? 'border-color:' + color + ';box-shadow:0 0 0 1px ' + color + '22' : ''}">
+        <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;border:2px solid ${c.done ? 'var(--green)' : (i === done ? color : 'var(--border2)')};background:${c.done ? 'var(--green)' : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:9px;color:#000;transition:all .15s;">${c.done ? '✓' : ''}</div>
+        <span style="font-size:13px;line-height:1">${c.icon || getStageIcon(s)}</span>
+        <span style="font-size:12px;font-weight:700;flex:1;color:${c.done ? 'var(--text3)' : (i === done ? 'var(--text)' : 'var(--text2)')};text-decoration:${c.done ? 'line-through' : 'none'};">${escapeHTML(c.name)}</span>
+        ${!c.done && i === done ? `<span style="font-size:8px;font-family:'Space Mono',monospace;color:${color};letter-spacing:1px">NOW</span>` : ''}
+      </div>`;
+    }).join('')}
     ${allDone ? `<div style="text-align:center;padding:16px;font-size:11px;font-weight:700;color:var(--green);font-family:'Space Mono',monospace;letter-spacing:2px;margin-top:4px">✓ ALL DONE</div>` : ''}
     <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
       <div style="font-size:8px;font-family:'Space Mono',monospace;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px">QUICK NOTE — optional</div>
@@ -44,13 +47,14 @@ function renderChecklist() {
 }
 
 async function toggleCk(i) {
-  CHECKLIST[i].done = !CHECKLIST[i].done;
+  const items = window._currentChecklist || [];
+  items[i].done = !items[i].done;
   await saveActiveProject();
-  const doneCount = CHECKLIST.filter(c => c.done).length;
-  setPipe(Math.min(doneCount, PIPELINE.length - 1));
+  const doneCount = items.filter(c => c.done).length;
+  setPipe(Math.min(doneCount, getPipelineLength() - 1));
   renderChecklist();
   refreshInfoPanel();
-  logAction(`${CHECKLIST[i].l} marked ${CHECKLIST[i].done ? 'done' : 'undone'}`, CHECKLIST[i].done ? 'ok' : 'info');
+  logAction(`${items[i].name} marked ${items[i].done ? 'done' : 'undone'}`, items[i].done ? 'ok' : 'info');
 }
 
 function logAction(msg, type = 'info') {

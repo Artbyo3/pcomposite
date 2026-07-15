@@ -1,25 +1,30 @@
-import { PIPELINE } from './constants.js';
-import { projects } from './state.js';
+import { projects, globalSettings } from './state.js';
 import { saveActiveProject } from './projects.js';
 import { refreshInfoPanel } from './ui.js';
+import { getStageIcon, getPipelineLength, getStageLabel } from './helpers.js';
 
-// ── PIPELINE ──
 function renderPipeline() {
-  document.getElementById('pipebar').innerHTML = PIPELINE.map((s, i) => `
-    <div class="pstep">
-      <div class="pnode ${s.done ? 'done' : s.active ? 'active' : 'inactive'}" onclick="setPipe(${i})">
-        <span class="picon">${s.icon}</span>
-        <span class="plabel">${s.label}</span>
-        ${s.done ? '<div class="pcheck">✓</div>' : ''}
+  const stages = globalSettings.pipelineStages || [];
+  const p = projects.find(x => x.active);
+  const stagePos = p ? Math.max(0, Math.min(p.stage - 1, stages.length - 1)) : 0;
+  document.getElementById('pipebar').innerHTML = stages.map((s, i) => {
+    const done = i < stagePos;
+    const active = i === stagePos;
+    return `<div class="pstep">
+      <div class="pnode ${done ? 'done' : active ? 'active' : 'inactive'}" onclick="setPipe(${i})">
+        <span class="picon">${getStageIcon(s)}</span>
+        <span class="plabel">${getStageLabel(s)}</span>
+        ${done ? '<div class="pcheck">✓</div>' : ''}
       </div>
-      ${i < PIPELINE.length - 1 ? '<span class="parr">›</span>' : ''}
-    </div>
-  `).join('');
+      ${i < stages.length - 1 ? '<span class="parr">›</span>' : ''}
+    </div>`;
+  }).join('');
 }
 
 async function setPipe(i, skipDb = false) {
-  const clampedI = Math.max(0, Math.min(i, PIPELINE.length - 1));
-  PIPELINE.forEach((s, j) => { s.done = j < clampedI; s.active = j === clampedI; });
+  const len = getPipelineLength();
+  const clampedI = Math.max(0, Math.min(i, len - 1));
+
   renderPipeline();
 
   if (!skipDb) {
