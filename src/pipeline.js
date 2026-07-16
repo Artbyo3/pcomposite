@@ -25,8 +25,6 @@ async function setPipe(i, skipDb = false) {
   const len = getPipelineLength();
   const clampedI = Math.max(0, Math.min(i, len - 1));
 
-  renderPipeline();
-
   if (!skipDb) {
     const p = projects.find(x => x.active);
     if (p) {
@@ -34,6 +32,7 @@ async function setPipe(i, skipDb = false) {
       await saveActiveProject();
     }
   }
+  renderPipeline();
   refreshInfoPanel();
 }
 

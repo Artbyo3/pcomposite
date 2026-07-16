@@ -238,7 +238,7 @@ async function handleDroppedFiles(paths) {
 
       const fileInfo  = await stat(destPath);
       const sizeBytes = fileInfo.size;
-      const app = { blender:'Blender', subs:'Painter', unity:'Unity', pictures:'Viewer' }[destFolder] || 'Explorer';
+      const app = { blender:'Blender', subs:'Substance Painter', unity:'Unity', pictures:'Viewer' }[destFolder] || 'Explorer';
       const now = new Date().toLocaleDateString();
 
       const existingIdx = data.files.findIndex(f => f.name === baseNm && f.folder === destFolder);

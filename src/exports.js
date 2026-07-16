@@ -8,9 +8,14 @@ import { renderFileList } from './files.js';
 import { writeBridgeContext } from './bridge.js';
 
 // ── EXPORTS MANAGEMENT (integrated into fbx folder view) ──
+function _fbxKey() {
+  const tool = (globalSettings.tools || []).find(t => (t.capabilities || []).includes('fbx_versioning'));
+  return tool ? tool.folder_key : 'fbx';
+}
+
 function buildExportSection() {
   const exports = window._currentExports || [];
-  const fbxFiles = ALL_FILES.filter(f => f.folder === 'fbx');
+  const fbxFiles = ALL_FILES.filter(f => f.folder === _fbxKey());
   const assigned = new Set();
   for (const ex of exports) if (ex.fileNames) ex.fileNames.forEach(n => assigned.add(n));
   const unassigned = fbxFiles.filter(f => !assigned.has(f.name));
@@ -121,7 +126,7 @@ async function addExport() {
     '<option value="' + escapeHTML(t).replace(/"/g, '&quot;') + '">' + escapeHTML(t) + '</option>'
   ).join('');
 
-  const fbxFiles = ALL_FILES.filter(f => f.folder === 'fbx');
+  const fbxFiles = ALL_FILES.filter(f => f.folder === _fbxKey());
   const assigned = new Set();
   for (const ex of exports) if (ex.fileNames) ex.fileNames.forEach(n => assigned.add(n));
   const available = fbxFiles.filter(f => !assigned.has(f.name));
@@ -249,7 +254,7 @@ function saveExport(btn) {
   window._currentExports = exports;
   overlay?.remove();
   saveActiveProject();
-  renderFileList('fbx');
+  renderFileList(_fbxKey());
   writeBridgeContext();
   showToast('Export v' + version + ' logged for ' + target, 'var(--green)');
 }
@@ -265,7 +270,7 @@ function toggleFinalExport(idx) {
     ex.isFinal = true;
   }
   saveActiveProject();
-  renderFileList('fbx');
+  renderFileList(_fbxKey());
   writeBridgeContext();
 }
 
@@ -274,7 +279,7 @@ function deleteExport(idx) {
   exports.splice(idx, 1);
   window._currentExports = exports;
   saveActiveProject();
-  renderFileList('fbx');
+  renderFileList(_fbxKey());
   writeBridgeContext();
 }
 
@@ -282,7 +287,7 @@ function deleteExportGroup(target) {
   const exports = window._currentExports || [];
   window._currentExports = exports.filter(e => e.target !== target);
   saveActiveProject();
-  renderFileList('fbx');
+  renderFileList(_fbxKey());
   writeBridgeContext();
 }
 
@@ -330,16 +335,17 @@ function updateCollapseAllLabel() {
   btn.textContent = allCollapsed >= total ? '▾ All' : '▲ All';
 }
 
+let _coverUrls = [];
 async function loadExportCovers() {
   if (!globalSettings.root_path) return;
+  _coverUrls.forEach(u => URL.revokeObjectURL(u));
+  _coverUrls = [];
   const cards = document.querySelectorAll('.exp-target[data-target]');
-  // Build name → id lookup for renamed folders
   const nameToId = {};
   for (const [id, name] of Object.entries(baseIdMap)) nameToId[name] = id;
 
   for (const card of cards) {
     const target = card.dataset.target;
-    // Resolve folder name using ID map (handles renames)
     const baseId = nameToId[target];
     const folderName = baseId ? baseIdMap[baseId] : target;
     const baseDir = await join(globalSettings.root_path, '_bases', folderName);
@@ -353,6 +359,7 @@ async function loadExportCovers() {
       const mime = { png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',bmp:'image/bmp' }[ext] || 'image/png';
       const bytes = await readFile(coverPath);
       const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+      _coverUrls.push(url);
       const imgEl = card.querySelector('.exp-cover-img');
       if (imgEl) imgEl.style.backgroundImage = 'url(' + url + ')';
     } catch (e) { console.warn('Failed to load cover for', target, e); }

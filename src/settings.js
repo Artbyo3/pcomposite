@@ -182,13 +182,14 @@ function renderSectionContent(section) {
     const tools = globalSettings.tools || [];
     const stages = globalSettings.pipelineStages || [];
     return `<div class="set-group">
-      <div class="set-group-title">Tools</div>
+      <div class="set-group-title">Tools <span class="wf-count">${tools.length}</span></div>
       <div class="set-group-desc">Define the tools and folders in your pipeline. Official tools are built-in; custom tools you can add and remove freely.</div>
+      <div class="wf-search"><input id="wfToolsSearch" class="fi" placeholder="Search tools..." oninput="filterToolsList()"></div>
       <div id="toolsListContent">${_renderToolsList(tools)}</div>
       <div class="wf-add-area"><button class="set-btn" onclick="showToolForm()">+ ADD TOOL</button></div>
     </div>
     <div class="set-group">
-      <div class="set-group-title">Pipeline Stages</div>
+      <div class="set-group-title">Pipeline Stages <span class="wf-count">${stages.length}</span></div>
       <div class="set-group-desc">Stages shown in the pipeline bar and used to generate checklists for new projects.</div>
       <div id="stagesListContent">${_renderStagesList(stages, tools)}</div>
       <div class="wf-add-area"><button class="set-btn" onclick="showStageForm()">+ ADD STAGE</button></div>
@@ -307,9 +308,10 @@ window.setTheme = async function(theme) {
 // ── TOOLS LIST RENDERER ──
 
 function _renderToolsList(tools) {
-  if (!tools.length) return '<div style="padding:16px;text-align:center;font-size:9px;color:var(--text3);font-family:\'Space Mono\',monospace;border:1px dashed var(--border);border-radius:6px;background:var(--bg)">No tools configured</div>';
-  return tools.map((t, i) => `
-    <div class="wf-item">
+  if (!tools.length) return '<div class="wf-empty">No tools configured</div>';
+  return tools.map((t, i) => {
+    const sd = escapeHTML((t.name + ' ' + t.folder_key).toLowerCase());
+    return `<div class="wf-item" data-search="${sd}">
       <div class="wf-reorder">
         <button onclick="moveTool('${t.id}',-1)" ${i === 0 ? 'style="visibility:hidden"' : ''}>▲</button>
         <button onclick="moveTool('${t.id}',1)" ${i === tools.length - 1 ? 'style="visibility:hidden"' : ''}>▼</button>
@@ -317,19 +319,19 @@ function _renderToolsList(tools) {
       <div class="wf-color" style="background:${t.color}"></div>
       <div class="wf-info">
         <div class="wf-name">${escapeHTML(t.name)}</div>
-        <div class="wf-meta">folder: ${escapeHTML(t.folder_key)}${t.exe_path ? ' · ' + escapeHTML(t.exe_path) : ''}</div>
+        <div class="wf-meta">${escapeHTML(t.folder_key)}</div>
       </div>
       <span class="wf-tier ${t.tier}">${t.tier.toUpperCase()}</span>
       <div class="wf-actions">
         <button class="wf-btn" onclick="showToolForm('${t.id}')">✎</button>
         ${t.tier !== 'official' ? `<button class="wf-btn danger" onclick="deleteTool('${t.id}')">✕</button>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function _renderStagesList(stages, tools) {
-  if (!stages.length) return '<div style="padding:16px;text-align:center;font-size:9px;color:var(--text3);font-family:\'Space Mono\',monospace;border:1px dashed var(--border);border-radius:6px;background:var(--bg)">No stages configured</div>';
+  if (!stages.length) return '<div class="wf-empty">No stages configured</div>';
   return stages.map((s, i) => {
     const toolName = s.tool_id ? (tools.find(t => t.id === s.tool_id)?.name || '?') : null;
     return `<div class="wf-item">
@@ -582,6 +584,13 @@ window.moveStage = async function(idx, direction) {
   globalSettings.pipelineStages = stages;
   try { await saveSettings(globalSettings); renderSettings(); }
   catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+};
+
+window.filterToolsList = function() {
+  const q = document.getElementById('wfToolsSearch')?.value.toLowerCase() || '';
+  document.querySelectorAll('#toolsListContent .wf-item').forEach(el => {
+    el.style.display = (!q || (el.dataset.search || '').includes(q)) ? '' : 'none';
+  });
 };
 
 // ── FORM HELPERS ──

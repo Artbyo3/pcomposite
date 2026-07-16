@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 dist-ssr/
+*.tgz
 
 # Tauri
 src-tauri/target/
@@ -43,3 +44,12 @@ tauri_help.txt
 # Backup files
 *.bak
 *~
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# TypeScript
+*.tsbuildinfo

@@ -146,7 +146,7 @@ async function selectProject(i) {
   const safeId = sanitizeProjectId(p.id, 'Project');
   document.getElementById('phId').textContent   = safeId;
   document.getElementById('phName').textContent = p.name;
-document.getElementById('crumb').innerHTML    = '<b>' + safeId + '</b> <span style="color:var(--text3)">/ ' + escapeHTML(p.name) + '</span>';
+  document.getElementById('crumb').innerHTML    = '<b>' + safeId + '</b> <span style="color:var(--text3)">/ ' + escapeHTML(p.name) + '</span>';
   document.getElementById('phPath').innerHTML   = `<span class="seg">${escapeHTML(rootLabel)}</span><span style="color:var(--text3)">›</span><span class="seg" style="color:var(--accent)">${safeId} — ${escapeHTML(p.name)}</span>`;
 
   // Reset view state when switching projects

@@ -20,7 +20,7 @@ function refreshFolders() {
 function renderFolders() {
   const folders = getToolFolders();
   document.getElementById('fgrid').innerHTML = folders.map(f => `
-    <div class="ftile ${f.files === 0 ? 'empty' : ''}" onclick="drillFolder('${f.key}')" style="--fc:${f.color}">
+    <div class="ftile ${f.files === 0 ? 'empty' : ''}" onclick="drillFolder('${escapeHTML(f.key).replace(/'/g,"\\'")}')" style="--fc:${f.color}">
       <div class="ft-glow"></div>
       <div class="ft-content">
         <div class="ft-badge">${f.files} ITEM${f.files !== 1 ? 'S' : ''}</div>

@@ -62,7 +62,7 @@ function logAction(msg, type = 'info') {
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   projectLog.unshift({ msg, type, time: timeStr });
   if (projectLog.length > 50) projectLog.length = 50;
-  if (document.getElementById('pLog').style.display !== 'none') renderLog();
+  if (document.getElementById('pLog')?.style.display !== 'none') renderLog();
 }
 
 function renderLog() {

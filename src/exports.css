@@ -227,3 +227,4 @@
 .exp-empty { padding:24px 20px 18px; text-align:center; }
 .exp-empty-text { font-size:9px; font-family:'Space Mono',monospace; color:var(--text3); letter-spacing:1px; line-height:1.8; }
 .exp-empty-sub { font-size:8px; font-family:'Space Mono',monospace; color:var(--text4); }
+.exp-modal-empty { padding:16px; text-align:center; font-size:9px; font-family:'Space Mono',monospace; color:var(--text3); border:1px dashed var(--border); border-radius:6px; background:var(--bg); }

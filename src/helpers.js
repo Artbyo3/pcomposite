@@ -125,6 +125,7 @@ export function getStageColor(stage) {
 
 const APP_ICON_MAP = {
   Blender: '<img src="/blender.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
+  'Substance Painter': '<img src="/substance-3d-painter.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
   Painter: '<img src="/substance-3d-painter.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
   Unity:   '<img src="/Unity.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
   Viewer: '<span style="font-size:1em">🖼️</span>',

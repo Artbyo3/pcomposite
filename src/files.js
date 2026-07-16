@@ -204,7 +204,7 @@ async function openFile(idx) {
     // fall through to system default for unsupported image types
   }
 
-  let exePath = { Blender: globalSettings.blender_path, Painter: globalSettings.painter_path, Unity: globalSettings.unity_path }[f.app] || '';
+  let exePath = { Blender: globalSettings.blender_path, 'Substance Painter': globalSettings.painter_path, Painter: globalSettings.painter_path, Unity: globalSettings.unity_path }[f.app] || '';
 
   if (!exePath && f.app !== 'Viewer' && f.app !== 'Explorer') {
     showToast('No executable set for ' + f.app + ' in Settings', 'var(--orange)'); return;
@@ -225,13 +225,16 @@ async function openFile(idx) {
   }
 }
 
+let _ivUrl = '';
 async function openImageViewer(path, filename) {
   const viewer = document.getElementById('imageViewer');
   try {
     const bytes = await readFile(path);
     const ext = (filename || '').split('.').pop().toLowerCase();
     const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp' }[ext] || 'image/png';
-    document.getElementById('ivImg').src = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    if (_ivUrl) URL.revokeObjectURL(_ivUrl);
+    _ivUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    document.getElementById('ivImg').src = _ivUrl;
     document.getElementById('ivFilename').textContent = filename || '';
     viewer.style.display = 'flex';
   } catch (err) {

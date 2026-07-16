@@ -18,7 +18,8 @@ export async function initDataStore() {
 async function loadJSON(name) {
   const p = await join(await base(), name);
   if (!(await exists(p))) return null;
-  return JSON.parse(await readTextFile(p));
+  try { return JSON.parse(await readTextFile(p)); }
+  catch (e) { console.warn('loadJSON: failed to parse', name, e); return null; }
 }
 
 async function saveJSON(name, data) {
@@ -71,7 +72,8 @@ export async function scanVault(vaultPath) {
 export async function loadProject(vaultPath, id, name) {
   const p = await projectFilePath(vaultPath, id, name);
   if (!(await exists(p))) return null;
-  return JSON.parse(await readTextFile(p));
+  try { return JSON.parse(await readTextFile(p)); }
+  catch (e) { console.warn('loadProject: failed to parse', p, e); return null; }
 }
 
 export async function saveProject(vaultPath, project) {
@@ -109,7 +111,7 @@ function _appForFolder(folder) {
   const tools = globalSettings.tools || [];
   const tool = tools.find(t => t.folder_key === folder);
   if (tool) return tool.name;
-  if (['.png','.jpg','.jpeg','.gif','.webp','.svg','.bmp'].some(e => folder.includes('picture') || folder === 'images')) return 'Viewer';
+  if (folder.includes('picture') || folder === 'images') return 'Viewer';
   return 'Explorer';
 }
 

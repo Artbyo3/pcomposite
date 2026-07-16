@@ -392,6 +392,7 @@ function saveReleaseDate(p) {
     checklist: (window._currentChecklist || []).map(c => ({ label: c.name, done: c.done })),
     note: sessionNote,
     exports: window._currentExports || [],
+    imported_bases: window._importedBases || [],
   };
   saveProject(globalSettings.root_path, data);
 }
