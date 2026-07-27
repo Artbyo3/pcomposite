@@ -68,11 +68,10 @@
     background:linear-gradient(160deg,var(--bg4) 0%,var(--bg3) 100%);
     border-color:transparent;
     box-shadow:0 1px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.04),
-               inset 0 0 0 1px color-mix(in srgb,var(--accent) 15%,transparent),
-               inset 3px 0 0 var(--accent);
+               inset 0 0 0 1px color-mix(in srgb,var(--accent) 20%,transparent);
   }
   .pcard.active::before {
-    background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 40%,rgba(255,255,255,.15)) 0%,color-mix(in srgb,var(--accent) 15%,rgba(255,255,255,.03)) 35%,transparent 65%);
+    background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 12%,rgba(255,255,255,.06)) 0%,transparent 50%);
   }
 
   .pcard.has-thumb {
