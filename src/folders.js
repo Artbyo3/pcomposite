@@ -4,8 +4,7 @@ import { setVTab } from './ui.js';
 import { renderFileList } from './files.js';
 
 // ── FOLDERS ──
-function refreshFolders() {
-  const folders = getToolFolders();
+function _countFolders(folders) {
   ALL_FILES.forEach(file => {
     const folder = folders.find(f => f.key === file.folder);
     if (folder) { folder.files++; folder._bytes += (file.sizeBytes || 0); }
@@ -14,22 +13,29 @@ function refreshFolders() {
     f.size = f._bytes > 0 ? formatBytes(f._bytes) : '-';
     f.pct  = f.files > 0 ? 100 : 0;
   });
+  return folders;
+}
+
+function refreshFolders() {
   renderFolders();
 }
 
 function renderFolders() {
-  const folders = getToolFolders();
-  document.getElementById('fgrid').innerHTML = folders.map(f => `
-    <div class="ftile ${f.files === 0 ? 'empty' : ''}" onclick="drillFolder('${escapeHTML(f.key).replace(/'/g,"\\'")}')" style="--fc:${f.color}">
+  const folders = _countFolders(getToolFolders());
+  document.getElementById('fgrid').innerHTML = folders.map(f => {
+    const tip = f.files > 0
+      ? `${f.files} file${f.files !== 1 ? 's' : ''} — ${f.size || 'empty'}`
+      : `${f.key}/ is empty — drop files here`;
+    return `
+    <div class="ftile ${f.files === 0 ? 'empty' : ''}" onclick="drillFolder('${escapeHTML(f.key).replace(/'/g,"\\'")}')" style="--fc:${f.color}" data-tip="${tip}">
       <div class="ft-glow"></div>
       <div class="ft-content">
         <div class="ft-badge">${f.files} ITEM${f.files !== 1 ? 'S' : ''}</div>
         <div class="ft-icon">${f.icon}</div>
         <div class="ft-title">${escapeHTML(f.key)}</div>
       </div>
-    </div>
-  `).join('');
-
+    </div>`;
+  }).join('');
 }
 
 function drillFolder(key) {

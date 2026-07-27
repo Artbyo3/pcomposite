@@ -30,12 +30,12 @@ function renderChecklist() {
         <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;border:2px solid ${c.done ? 'var(--green)' : (i === done ? color : 'var(--border2)')};background:${c.done ? 'var(--green)' : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:9px;color:#000;transition:all .15s;">${c.done ? '✓' : ''}</div>
         <span style="font-size:13px;line-height:1">${c.icon || getStageIcon(s)}</span>
         <span style="font-size:12px;font-weight:700;flex:1;color:${c.done ? 'var(--text3)' : (i === done ? 'var(--text)' : 'var(--text2)')};text-decoration:${c.done ? 'line-through' : 'none'};">${escapeHTML(c.name)}</span>
-        ${!c.done && i === done ? `<span style="font-size:8px;font-family:'Space Mono',monospace;color:${color};letter-spacing:1px">NOW</span>` : ''}
+        ${!c.done && i === done ? `<span style="font-size:10px;font-family:'Space Mono',monospace;color:${color};letter-spacing:1px">NOW</span>` : ''}
       </div>`;
     }).join('')}
     ${allDone ? `<div style="text-align:center;padding:16px;font-size:11px;font-weight:700;color:var(--green);font-family:'Space Mono',monospace;letter-spacing:2px;margin-top:4px">✓ ALL DONE</div>` : ''}
     <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
-      <div style="font-size:8px;font-family:'Space Mono',monospace;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px">QUICK NOTE — optional</div>
+      <div style="font-size:10px;font-family:'Space Mono',monospace;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px">QUICK NOTE — optional</div>
       <textarea id="sessionNote" placeholder="e.g. left off at weight painting the hood..." oninput="saveSessionNote(this.value)" style="width:100%;min-height:64px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:9px 11px;color:var(--text2);font-family:'Space Mono',monospace;font-size:10px;outline:none;resize:none;line-height:1.6;transition:border-color .15s;">${escapeHTML(sessionNote)}</textarea>
     </div>
   `;

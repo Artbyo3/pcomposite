@@ -11,7 +11,7 @@
 <!-- TITLEBAR -->
 <div class="titlebar">
   <span class="logo">PCOMPOSITE</span>
-  <div class="tcrumb" id="crumb"><b>Projects</b> <span style="color:var(--text3)">/ select a project</span></div>
+  <div class="tcrumb" id="crumb"><b>Projects</b> <span class="crumb-sep">/ select a project</span></div>
   <div class="tright">
     <button class="tbtn" onclick="openGallery()">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -44,12 +44,12 @@
         <button class="chip on" data-sort="date"  onclick="setSort(this,'date')">Date</button>
         <button class="chip"    data-sort="name"  onclick="setSort(this,'name')">Name</button>
         <button class="chip"    data-sort="stage" onclick="setSort(this,'stage')">Stage</button>
-        <span style="margin-left:auto"></span>
+        <span class="spacer"></span>
         <button class="chip" onclick="toggleFilter(this,'wip')">WIP</button>
         <button class="chip" onclick="toggleFilter(this,'done')">Done</button>
       </div>
     </div>
-    <div class="plist" id="plist"></div>
+    <div class="plist" id="plist" role="listbox" aria-label="Projects"></div>
   </div>
 
   <!-- MAIN -->
@@ -72,7 +72,7 @@
     <div class="phead">
       <div class="ph-top">
         <div style="display:flex;align-items:center;gap:12px">
-          <div id="phThumb" onclick="triggerActiveThumb()" style="width:48px;height:48px;flex-shrink:0;border-radius:6px;overflow:hidden;border:1px solid var(--border2);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;" title="Set cover image">
+          <div id="phThumb" class="ph-thumb" onclick="triggerActiveThumb()" title="Set cover image">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           </div>
           <div>
@@ -91,12 +91,12 @@
         </div>
       </div>
       <div class="ph-path" id="phPath">
-        <span class="seg" style="color:var(--text3)">No project selected</span>
+        <span class="seg crumb-sep">No project selected</span>
       </div>
     </div>
 
     <!-- Pipeline -->
-    <div class="pipebar" id="pipebar"></div>
+    <div class="pipebar" id="pipebar" role="tablist"></div>
 
     <!-- Content -->
     <div class="mbody">
@@ -148,23 +148,23 @@
       <div class="isec">
         <div class="isect">Progress</div>
         <div class="progrow">
-          <div class="progtop"><span>Pipeline</span><span style="color:var(--accent)" id="ppct">0%</span></div>
-          <div class="progbar"><div class="progfill" id="pfill" style="width:0%;background:var(--accent)"></div></div>
+          <div class="progtop"><span>Pipeline</span><span class="iv acc" id="ppct">0%</span></div>
+          <div class="progbar"><div class="progfill progfill-accent" id="pfill" style="width:0%"></div></div>
         </div>
         <div class="progrow">
-          <div class="progtop"><span>Folders populated</span><span style="color:var(--green)" id="piFoldersPct">—</span></div>
-          <div class="progbar"><div class="progfill" id="piFoldersFill" style="width:0%;background:var(--green)"></div></div>
+          <div class="progtop"><span>Folders populated</span><span class="iv ok" id="piFoldersPct">—</span></div>
+          <div class="progbar"><div class="progfill progfill-green" id="piFoldersFill" style="width:0%"></div></div>
         </div>
         <div class="progrow">
-          <div class="progtop"><span>Checklist</span><span style="color:var(--blue)" id="piCheckPct">—</span></div>
-          <div class="progbar"><div class="progfill" id="piCheckFill" style="width:0%;background:var(--blue)"></div></div>
+          <div class="progtop"><span>Checklist</span><span class="iv" id="piCheckPct" style="color:var(--blue)">—</span></div>
+          <div class="progbar"><div class="progfill progfill-blue" id="piCheckFill" style="width:0%"></div></div>
         </div>
       </div>
 
       <div class="isec">
         <div class="isect">Storage</div>
         <div class="irow"><span class="ik">Total</span><span class="iv" id="piTotalSize">—</span></div>
-        <div id="piStorageRows"></div>
+        <div id="piStorageRows" class="pi-storage"></div>
       </div>
     </div>
 
@@ -172,15 +172,15 @@
       <div class="agroup">
         <div class="agt">Open With</div>
         <button class="abtn" onclick="showToast('Set Blender path in Settings first','var(--orange)')">
-          <img src="/blender.svg" style="width:14px;height:14px"> Open Blender
+          <img src="/blender.svg" class="abtn-icon"> Open Blender
           <span class="bdg">blender/</span>
         </button>
         <button class="abtn" onclick="showToast('Set Painter path in Settings first','var(--orange)')">
-          <img src="/substance-3d-painter.svg" style="width:14px;height:14px"> Open Painter
+          <img src="/substance-3d-painter.svg" class="abtn-icon"> Open Painter
           <span class="bdg">subs/</span>
         </button>
         <button class="abtn" onclick="showToast('Set Unity path in Settings first','var(--orange)')">
-          <img src="/Unity.svg" style="width:14px;height:14px"> Open Unity
+          <img src="/Unity.svg" class="abtn-icon"> Open Unity
           <span class="bdg">unity/</span>
         </button>
       </div>
@@ -205,7 +205,7 @@
     </div>
 
     <div class="pbody" id="pLog" style="display:none">
-      <div style="padding:20px;text-align:center;font-size:9px;font-family:'Space Mono',monospace;color:var(--text3)">No activity yet</div>
+      <div class="pbody-empty">No activity yet</div>
     </div>
   </div>
 
@@ -216,11 +216,11 @@
   <div class="ssep"></div>
   <div class="si" id="sbCnt">0 projects</div>
   <div class="ssep"></div>
-  <div class="si" style="margin-left:auto;cursor:pointer" onclick="toggleChangelog()" id="versionLabel">PCOMPOSITE v0.0.6</div>
+  <div class="si sb-version" onclick="toggleChangelog()" id="versionLabel">PCOMPOSITE v0.0.7</div>
   <div id="changelogCard" class="changelog-card">
     <div class="changelog-hd">
       <span>Changelog</span>
-      <button onclick="closeChangelog()" class="close-btn" style="width:20px;height:20px;font-size:9px;">✕</button>
+      <button onclick="closeChangelog()" class="close-btn close-btn-sm">✕</button>
     </div>
     <div class="changelog-body" id="changelogBody"></div>
   </div>
@@ -237,13 +237,13 @@
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="gallerySearch" type="text" placeholder="search..." oninput="renderGallery()" />
       </div>
-      <div style="display:flex;gap:4px" id="galleryFilters">
+      <div class="flex-gap4" id="galleryFilters">
         <button class="chip on" onclick="setGalleryFilter(this,'all')">All</button>
         <button class="chip" onclick="setGalleryFilter(this,'wip')">WIP</button>
         <button class="chip" onclick="setGalleryFilter(this,'done')">Done</button>
       </div>
       <div class="sep-v"></div>
-      <div style="display:flex;gap:4px" id="galleryViewToggle">
+      <div class="flex-gap4" id="galleryViewToggle">
         <button class="chip on" data-view="grid" onclick="setGalleryView('grid')">Grid</button>
         <button class="chip" data-view="calendar" onclick="setGalleryView('calendar')">Calendar</button>
       </div>
@@ -261,7 +261,7 @@
       <div class="mtitle">New Project</div>
       <div class="mclose" onclick="closeModal()">✕</div>
     </div>
-    <div class="mbody2">
+    <div class="modal-bd">
       <div class="fg">
         <label class="fl">Project Name</label>
         <input class="fi" type="text" placeholder="HoodieV3_Leather" id="nName" onkeydown="if(event.key==='Enter')createProject()" />
@@ -272,8 +272,8 @@
       </div>
     </div>
     <div class="mfoot">
-      <button class="btn bg" onclick="closeModal()">Cancel</button>
-      <button class="btn bp" onclick="createProject()">Create Project + Folders</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createProject()">Create Project + Folders</button>
     </div>
   </div>
 </div>
@@ -295,8 +295,8 @@
     <span id="basesTitle" class="fs-hd-title">BASES LIBRARY</span>
     <span id="basesCount" class="fs-hd-sub"></span>
     <div class="fs-hd-actions">
-      <button id="basesNewGroupBtn" onclick="createGroup()" class="tbtn" style="font-size:9px;padding:4px 10px">+ NEW GROUP</button>
-      <button id="basesAddFilesBtn" onclick="addFilesToDetail()" class="tbtn" style="font-size:9px;padding:4px 10px;display:none">+ ADD FILES</button>
+      <button id="basesNewGroupBtn" onclick="createGroup()" class="tbtn tbtn-sm">+ NEW GROUP</button>
+      <button id="basesAddFilesBtn" onclick="addFilesToDetail()" class="tbtn tbtn-sm" style="display:none">+ ADD FILES</button>
       <button onclick="closeBases()" class="close-btn">✕</button>
     </div>
   </div>
@@ -305,15 +305,56 @@
 </div>
 
 <!-- IMAGE VIEWER LIGHTBOX -->
-<div id="imageViewer" style="position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:999;display:none;align-items:center;justify-content:center;cursor:pointer;">
-  <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;padding:8px 14px;gap:10px;background:linear-gradient(180deg,rgba(0,0,0,.6),transparent);z-index:1;">
-    <div id="ivFilename" style="font-size:10px;font-family:'Space Mono',monospace;color:#fff8"></div>
-    <div style="margin-left:auto"></div>
-    <button id="ivClose" class="close-btn" style="background:rgba(255,255,255,.08);border-color:transparent;color:#fff;">✕</button>
+<div id="imageViewer" class="iv-overlay">
+  <div class="iv-bar">
+    <div id="ivFilename" class="iv-filename"></div>
+    <div class="iv-spacer"></div>
+    <button id="ivClose" class="close-btn iv-close">✕</button>
   </div>
-  <img id="ivImg" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:4px;box-shadow:0 20px 60px rgba(0,0,0,.5);cursor:default;" onclick="event.stopPropagation()">
+  <img id="ivImg" class="iv-img" onclick="event.stopPropagation()">
 </div>
 
+<!-- impeccable-variants-start 3439cf1a -->
+<div data-impeccable-variants="3439cf1a" data-impeccable-variant-count="3" style="display:contents">
+<div data-impeccable-variant="1" class="iv-card-v">
+<style>
+  .pcard.active {
+    box-shadow: 0 1px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.04),
+               inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent) !important;
+  }
+  .pcard.active::before {
+    background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 20%, rgba(255,255,255,.1)) 0%, transparent 50%) !important;
+  }
+</style>
+</div>
+<div data-impeccable-variant="2" class="iv-card-v" style="display:none">
+<style>
+  .pcard.active {
+    box-shadow: 0 1px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.04),
+               0 0 16px color-mix(in srgb, var(--accent) 10%, transparent),
+               inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent) !important;
+  }
+  .pcard.active::before {
+    background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 15%, rgba(255,255,255,.08)) 0%, transparent 40%) !important;
+  }
+</style>
+</div>
+<div data-impeccable-variant="3" class="iv-card-v" style="display:none">
+<style>
+  .pcard.active {
+    box-shadow: 0 1px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.04) !important;
+    background: linear-gradient(160deg, var(--bg4) 0%, color-mix(in srgb, var(--accent) 4%, var(--bg3)) 100%) !important;
+  }
+  .pcard.active::before {
+    background: none !important;
+  }
+</style>
+</div>
+</div>
+<!-- impeccable-variants-end 3439cf1a -->
 <script type="module" src="/src/main.js"></script>
+<!-- impeccable-live-start -->
+<script src="http://localhost:8400/live.js?token=9ff7d967-0190-4353-ad64-701d3b6bce21"></script>
+<!-- impeccable-live-end -->
 </body>
 </html>

@@ -48,7 +48,7 @@ async function saveSetting(key, value) {
   const el = document.getElementById('set_' + key);
   if (el) el.value = value;
   try { await saveSettings(globalSettings); }
-  catch (e) { showToast('Error saving setting', 'var(--red)'); }
+  catch (e) { showToast('Could not save setting', 'var(--red)'); }
   if (key === 'root_path' && value) {
     await ensureVaultBasesDir(value);
   }
@@ -79,7 +79,7 @@ async function pickSettingPath(key, isDir) {
   try {
     const selected = await openDialog({ directory: isDir, multiple: false, defaultPath: globalSettings[key] || undefined });
     if (selected) { await saveSetting(key, selected); showToast('Path updated', 'var(--green)'); }
-  } catch (err) { showToast('Failed to open dialog: ' + err, 'var(--red)'); }
+  } catch (err) { showToast('Could not open file browser', 'var(--red)'); }
 }
 
 function makeField(key, cfg) {
@@ -166,7 +166,7 @@ function renderSectionContent(section) {
                 <button onclick="pickSettingPath('${pathKey}',false)" class="set-browse" title="Browse"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
               </div>
                 ${key === 'blender' ? `
-                  <div class="addon-box" onmousedown="dragStart(event)" onmousemove="dragMove(event)" onmouseup="dragEnd(event)">
+                  <div class="addon-box" onmousedown="dragStart(event)" onmousemove="dragMove(event)" onmouseup="dragEnd(event)" data-tip="Drag this card into Blender's window to install the addon">
                   <img src="/addon_icon.png" width="22" height="22" style="object-fit:contain">
                   <div class="addon-title">Blender Addon</div>
                   <div class="addon-sub">Drag this card into Blender to install</div>
@@ -274,7 +274,7 @@ window.dragMove = async function(e) {
     try {
       await invoke('drag_addon');
     } catch (err) {
-      showToast('Drag failed: ' + err, 'var(--red)');
+      showToast('Drag cancelled', 'var(--red)');
     } finally {
       if (dragClone) { dragClone.remove(); dragClone = null; }
     }
@@ -363,17 +363,17 @@ window.showToolForm = function(toolId) {
   const currentColor = tool?.color || TOOL_COLORS[0];
 
   const overlay = document.createElement('div');
-  overlay.className = 'wf-overlay';
+  overlay.className = 'overlay';
   overlay.id = 'toolFormOverlay';
   overlay.onclick = (e) => { if (e.target === overlay) closeToolForm(); };
 
   overlay.innerHTML = `
-    <div class="wf-form">
-      <div class="wf-form-hd">
-        <span class="wf-form-title">${tool ? 'Edit Tool' : 'Add Tool'}</span>
-        <button class="wf-form-close" onclick="closeToolForm()">✕</button>
+    <div class="modal">
+      <div class="mhead">
+        <span class="mtitle">${tool ? 'Edit Tool' : 'Add Tool'}</span>
+        <button class="mclose" onclick="closeToolForm()">✕</button>
       </div>
-      <div class="wf-form-body">
+      <div class="mbody2">
         <div class="fg">
           <label class="fl">Name</label>
           <input id="wf_toolName" class="fi" placeholder="e.g. Maya" value="${escapeHTML(tool?.name || '')}" ${isOfficial ? 'readonly' : ''}>
@@ -398,15 +398,15 @@ window.showToolForm = function(toolId) {
           </div>
         </div>
       </div>
-      <div class="wf-form-ft">
-        <button class="btn-sec" onclick="closeToolForm()">Cancel</button>
-        <button class="btn-pri" onclick="saveToolFromForm()">Save</button>
+      <div class="mfoot">
+        <button class="btn btn-secondary" onclick="closeToolForm()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveToolFromForm()">Save</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(overlay);
-  requestAnimationFrame(() => { const el = document.getElementById('wf_toolName'); if (el) el.focus(); });
+  requestAnimationFrame(() => { overlay.classList.add('open'); const el = document.getElementById('wf_toolName'); if (el) el.focus(); });
 };
 
 window.closeToolForm = function() {
@@ -447,7 +447,7 @@ window.saveToolFromForm = async function() {
     closeToolForm();
     renderSettings();
     showToast('Tool saved', 'var(--green)');
-  } catch (e) { showToast('Error saving: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not save tool', 'var(--red)'); }
 };
 
 window.deleteTool = async function(toolId) {
@@ -466,7 +466,7 @@ window.deleteTool = async function(toolId) {
     await saveSettings(globalSettings);
     renderSettings();
     showToast('"' + tool.name + '" removed', 'var(--green)');
-  } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not remove tool', 'var(--red)'); }
 };
 
 window.moveTool = async function(toolId, direction) {
@@ -479,7 +479,7 @@ window.moveTool = async function(toolId, direction) {
   tools.forEach((t, i) => t.order = i);
   globalSettings.tools = tools;
   try { await saveSettings(globalSettings); renderSettings(); }
-  catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  catch (e) { showToast('Could not reorder tools', 'var(--red)'); }
 };
 
 // ── STAGE CRUD ──
@@ -494,17 +494,17 @@ window.showStageForm = function(idx) {
   const currentColor = stage?.color || TOOL_COLORS[0];
 
   const overlay = document.createElement('div');
-  overlay.className = 'wf-overlay';
+  overlay.className = 'overlay';
   overlay.id = 'stageFormOverlay';
   overlay.onclick = (e) => { if (e.target === overlay) closeStageForm(); };
 
   overlay.innerHTML = `
-    <div class="wf-form">
-      <div class="wf-form-hd">
-        <span class="wf-form-title">${stage ? 'Edit Stage' : 'Add Stage'}</span>
-        <button class="wf-form-close" onclick="closeStageForm()">✕</button>
+    <div class="modal">
+      <div class="mhead">
+        <span class="mtitle">${stage ? 'Edit Stage' : 'Add Stage'}</span>
+        <button class="mclose" onclick="closeStageForm()">✕</button>
       </div>
-      <div class="wf-form-body">
+      <div class="mbody2">
         <div class="fg">
           <label class="fl">Name</label>
           <input id="wf_stageName" class="fi" placeholder="e.g. Rigging" value="${escapeHTML(stage?.name || '')}">
@@ -524,15 +524,15 @@ window.showStageForm = function(idx) {
           </select>
         </div>
       </div>
-      <div class="wf-form-ft">
-        <button class="btn-sec" onclick="closeStageForm()">Cancel</button>
-        <button class="btn-pri" onclick="saveStageFromForm()">Save</button>
+      <div class="mfoot">
+        <button class="btn btn-secondary" onclick="closeStageForm()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveStageFromForm()">Save</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(overlay);
-  requestAnimationFrame(() => { const el = document.getElementById('wf_stageName'); if (el) el.focus(); });
+  requestAnimationFrame(() => { overlay.classList.add('open'); const el = document.getElementById('wf_stageName'); if (el) el.focus(); });
 };
 
 window.closeStageForm = function() {
@@ -563,7 +563,7 @@ window.saveStageFromForm = async function() {
     closeStageForm();
     renderSettings();
     showToast('Stage saved', 'var(--green)');
-  } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not save stage', 'var(--red)'); }
 };
 
 window.deleteStage = async function(idx) {
@@ -572,7 +572,7 @@ window.deleteStage = async function(idx) {
   const name = stages[idx].name;
   globalSettings.pipelineStages = stages.filter((_, i) => i !== idx);
   try { await saveSettings(globalSettings); renderSettings(); showToast('"' + name + '" removed', 'var(--green)'); }
-  catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  catch (e) { showToast('Could not remove stage', 'var(--red)'); }
 };
 
 window.moveStage = async function(idx, direction) {
@@ -583,7 +583,7 @@ window.moveStage = async function(idx, direction) {
   stages.forEach((s, i) => s.order = i);
   globalSettings.pipelineStages = stages;
   try { await saveSettings(globalSettings); renderSettings(); }
-  catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  catch (e) { showToast('Could not reorder stages', 'var(--red)'); }
 };
 
 window.filterToolsList = function() {

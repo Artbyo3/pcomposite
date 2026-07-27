@@ -32,7 +32,7 @@ function renderFileList(filterKey) {
           <span class="bc-sep">›</span>
           <span class="bc-cur">all files</span>
         `}
-        <span style="color:var(--text3);font-size:8px;margin-left:4px">— ${files.length} item${files.length !== 1 ? 's' : ''}</span>
+        <span style="color:var(--text3);font-size:10px;margin-left:4px">— ${files.length} item${files.length !== 1 ? 's' : ''}</span>
       </div>
       <div class="file-toolbar-right">
         ${hasFbxVer ? '<input id="fileFilter" class="file-filter-input" placeholder="filter files..." oninput="filterFileList(this.value)">' : ''}
@@ -77,7 +77,7 @@ function renderFileList(filterKey) {
   }
 
   const rows = files.map((f, fi) => `
-    <div class="frow ${cls}" oncontextmenu="showCtx(event,${indices[fi]})" onclick="this.classList.toggle('sel')">
+    <div class="frow ${cls}" oncontextmenu="showCtx(event,${indices[fi]})" onclick="this.classList.toggle('sel')" tabindex="0" role="option" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFile(${indices[fi]})}if(event.key==='Delete'){event.preventDefault();deleteFile(${indices[fi]})}">
       <span class="fr-ico">${isViewableImage(f.ext) ? `<img class="fr-thumb" data-idx="${indices[fi]}" src="" style="width:28px;height:28px;object-fit:cover;border-radius:3px;vertical-align:middle;">` : f.icon}</span>
       <div class="fr-nm-wrap"><span class="fr-nm">${escapeHTML(f.name)}</span>${fileToExport[f.name] ? '<span class="fr-tag">' + escapeHTML(fileToExport[f.name]) + '</span>' : ''}${f.subfolder ? '<span class="fr-tag" style="background:var(--border2);color:var(--text2)">' + escapeHTML(f.subfolder) + '</span>' : ''}</div>
       <div><span class="fr-ext" style="background:${f.ec}18;color:${f.ec}">${f.ext}</span></div>
@@ -177,7 +177,7 @@ window.createFile = async function(folderKey) {
     } else {
       await invoke('open_in_app', { exePath: toolExe, filePath: targetDir });
     }
-  } catch (e) { showToast('Error creating file: ' + String(e), 'var(--red)'); return; }
+  } catch (e) { showToast('Could not create file', 'var(--red)'); return; }
 
   logAction('Created ' + name + ext, 'ok');
   showToast('Created ' + name + ext, 'var(--green)');
@@ -220,8 +220,8 @@ async function openFile(idx) {
       logAction(`Opened ${f.name}`, 'ok');
     }
   } catch (err) {
-    showToast('Failed to launch: ' + err, 'var(--red)');
-    logAction(`Failed to open ${f.name}: ${err}`, 'err');
+    showToast('Could not open ' + f.app, 'var(--red)');
+    logAction(`Failed to open ${f.name}`, 'err');
   }
 }
 
@@ -238,7 +238,7 @@ async function openImageViewer(path, filename) {
     document.getElementById('ivFilename').textContent = filename || '';
     viewer.style.display = 'flex';
   } catch (err) {
-    showToast('Failed to load image: ' + err, 'var(--red)');
+    showToast('Could not load image', 'var(--red)');
   }
 }
 
@@ -262,7 +262,7 @@ async function revealFile(idx) {
     await invoke('open_in_app', { exePath: 'explorer', filePath: '/select,' + targetPath });
     logAction(`Revealed ${f.name} in Explorer`, 'info');
   } catch (err) {
-    showToast('Failed to reveal: ' + err, 'var(--red)');
+    showToast('Could not reveal file', 'var(--red)');
   }
 }
 
@@ -279,7 +279,7 @@ async function copyPath(idx) {
     showToast('Path copied to clipboard', 'var(--green)');
     logAction(`Copied path for ${f.name}`, 'info');
   } catch (err) {
-    showToast('Failed to copy: ' + err, 'var(--red)');
+    showToast('Could not copy path', 'var(--red)');
   }
 }
 
@@ -287,17 +287,43 @@ async function deleteFile(idx) {
   const f = ALL_FILES[idx];
   const p = projects.find(x => x.active);
   if (!p) return;
-  try {
-    ALL_FILES.splice(idx, 1);
-    await saveActiveProject();
-    renderFileList(currentFolder);
-    refreshFolders();
-    refreshInfoPanel();
-    logAction(`Removed ${f.name} from project`, 'warn');
-    showToast(`Removed ${f.name}`, 'var(--orange)');
-  } catch (err) {
-    showToast('Failed to remove: ' + err, 'var(--red)');
-  }
+
+  // Soft-remove from array (file stays on disk)
+  const removed = ALL_FILES.splice(idx, 1)[0];
+  const removedIdx = idx;
+  await saveActiveProject();
+  renderFileList(currentFolder);
+  refreshFolders();
+  refreshInfoPanel();
+
+  // Show undo toast with 5s window
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--orange);border-radius:6px;padding:8px 16px;font-size:11px;font-family:'Space Mono',monospace;color:var(--text);z-index:1000;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.5);animation:fadeUp .15s ease;white-space:nowrap;`;
+  t.innerHTML = `<span>Removed ${escapeHTML(f.name)}</span><button id="undoDelBtn" style="background:var(--accent);color:#000;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-family:'Space Mono',monospace;font-weight:700;cursor:pointer;letter-spacing:.5px">UNDO</button>`;
+  document.body.appendChild(t);
+
+  const undoBtn = t.querySelector('#undoDelBtn');
+  let undone = false;
+
+  undoBtn.addEventListener('click', () => {
+    undone = true;
+    ALL_FILES.splice(removedIdx, 0, removed);
+    saveActiveProject().then(() => {
+      renderFileList(currentFolder);
+      refreshFolders();
+      refreshInfoPanel();
+    });
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 200);
+  });
+
+  setTimeout(() => {
+    if (!undone) {
+      t.style.opacity = '0';
+      setTimeout(() => t.remove(), 200);
+      logAction(`Removed ${f.name} from project`, 'warn');
+    }
+  }, 5000);
 }
 
 // ── CONTEXT MENU ──

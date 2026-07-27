@@ -2,7 +2,7 @@ import { escapeHTML, formatBytes } from './helpers.js';
 import { projects, globalSettings } from './state.js';
 import { readDir, copyFile, mkdir, exists, remove, rename } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
-import { showToast } from './ui.js';
+import { showToast, showConfirm, showPrompt } from './ui.js';
 import { logAction } from './checklist.js';
 import { selectProject, saveActiveProject } from './projects.js';
 import { writeBridgeContext } from './bridge.js';
@@ -376,7 +376,7 @@ async function _setCoverFile(group, srcPath) {
     await writeBridgeContext();
     if (_currentGroup) await openGroup(_currentGroup);
     showToast('Cover image set', 'var(--green)');
-  } catch (e) { showToast('Error setting cover: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not set cover image', 'var(--red)'); }
 }
 
 async function setCoverImage() {
@@ -389,7 +389,7 @@ async function setCoverImage() {
     });
     if (!selected) return;
     await _setCoverFile(_currentGroup, selected);
-  } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not open file dialog', 'var(--red)'); }
 }
 
 async function removeCoverImage() {
@@ -438,7 +438,7 @@ async function startInlineRename() {
       showToast('Renamed to "' + val + '"', 'var(--green)');
       if (_currentGroup) await openGroup(_currentGroup);
       else await renderBases();
-    } catch (e) { showToast('Error: ' + e, 'var(--red)'); _cancelRename(input, oldName); }
+    } catch (e) { _cancelRename(input, oldName); showToast('Could not rename group', 'var(--red)'); }
   };
 
   input.addEventListener('keydown', (e) => {
@@ -474,7 +474,7 @@ async function importBase(group, fileName) {
   const destPath = await join(targetDir, fileName);
 
   try { await copyFile(srcPath, destPath); }
-  catch (e) { showToast('Error: ' + String(e), 'var(--red)'); return; }
+  catch (e) { showToast('Could not copy base file', 'var(--red)'); return; }
 
   if (!window._importedBases) window._importedBases = [];
   const existing = window._importedBases.findIndex(i => i.file === fileName && i.group === group);
@@ -502,7 +502,7 @@ async function importInBlender(group, fileName) {
   try {
     await invoke('focus_blender');
   } catch (e) {
-    showToast('Could not focus Blender: ' + e + '. Make sure Blender is open.', 'var(--orange)');
+    showToast('Could not focus Blender', 'var(--orange)');
   }
 }
 
@@ -532,7 +532,7 @@ async function addFilesToGroup(group) {
     if (_currentGroup) await openGroup(_currentGroup);
     else await renderBases();
     showToast(count + ' file' + (count !== 1 ? 's' : '') + ' added to ' + group, 'var(--green)');
-  } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not add files', 'var(--red)'); }
 }
 
 async function removeBaseFile(group, fileName) {
@@ -548,11 +548,15 @@ async function removeBaseFile(group, fileName) {
     if (_currentGroup) await openGroup(_currentGroup);
     else await renderBases();
     showToast(fileName + ' removed', 'var(--green)');
-  } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not remove file', 'var(--red)'); }
 }
 
 async function removeGroup(group) {
-  if (!confirm('Delete group "' + group + '" and all its files?')) return;
+  const confirmed = await showConfirm(
+    'Delete Group',
+    `Are you sure you want to delete "<b>${escapeHTML(group)}</b>" and all its files? This cannot be undone.`
+  );
+  if (!confirmed) return;
   const basesDirPath = await basesDir();
   const groupPath = await join(basesDirPath, group);
   try {
@@ -565,12 +569,12 @@ async function removeGroup(group) {
     _currentGroup = null;
     await renderBases();
     showToast('Group "' + group + '" deleted', 'var(--green)');
-  } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not delete group', 'var(--red)'); }
 }
 
 async function createGroup() {
-  const name = prompt('New group name:');
-  if (!name) return;
+  const name = await showPrompt('New Group', 'e.g. Character, Environment, Props');
+  if (!name || !name.trim()) return;
   const basesDirPath = await basesDir();
   const groupPath = await join(basesDirPath, name.trim());
   if (await exists(groupPath)) { showToast('Group already exists', 'var(--orange)'); return; }
@@ -580,7 +584,7 @@ async function createGroup() {
     await openGroup(_currentGroup);
     await writeBridgeContext();
     showToast('Group "' + name.trim() + '" created', 'var(--green)');
-  } catch (e) { showToast('Error: ' + e, 'var(--red)'); }
+  } catch (e) { showToast('Could not create group', 'var(--red)'); }
 }
 
 export { openBases, closeBases, renderBases, importBase, importInBlender, addFilesToGroup, removeBaseFile, removeGroup, createGroup, addFilesToDetail };

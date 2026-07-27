@@ -180,8 +180,8 @@ async function addExport() {
     )
     + '</div>'
     + '<div class="modal-ft">'
-    + '<button onclick="this.closest(\'.ov\').remove()" class="btn-sec">Cancel</button>'
-    + '<button onclick="saveExport(this)" class="btn-pri">Save</button>'
+    + '<button onclick="this.closest(\'.ov\').remove()" class="btn btn-secondary">Cancel</button>'
+    + '<button onclick="saveExport(this)" class="btn btn-primary">Save</button>'
     + '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('open'));

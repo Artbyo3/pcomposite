@@ -8,14 +8,108 @@ import { loadProjects, renderProjects, selectProject } from './projects.js';
 import { renderFileList } from './files.js';
 import { renderChecklist, renderLog, logAction } from './checklist.js';
 
-// ── TOAST ──
+// ── TOAST QUEUE ──
+const _toastQueue = [];
+const TOAST_GAP = 8;
+const TOAST_LIFETIME = 2000;
+const TOAST_FADEOUT = 200;
+
+function _positionToasts() {
+  let y = 40;
+  for (const t of _toastQueue) {
+    t.style.bottom = y + 'px';
+    y += t.offsetHeight + TOAST_GAP;
+  }
+}
+
 function showToast(msg, color = 'var(--accent)') {
   const t = document.createElement('div');
-  t.style.cssText = `position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid ${color};border-radius:6px;padding:8px 16px;font-size:11px;font-family:'Space Mono',monospace;color:var(--text);z-index:1000;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5);animation:fadeUp .15s ease;`;
+  t.style.cssText = `position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid ${color};border-radius:6px;padding:8px 16px;font-size:11px;font-family:'Space Mono',monospace;color:var(--text);z-index:1000;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5);animation:fadeUp .15s ease;transition:opacity ${TOAST_FADEOUT}ms ease;`;
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.style.opacity = '0', 1800);
-  setTimeout(() => t.remove(), 2000);
+  _toastQueue.push(t);
+  _positionToasts();
+  setTimeout(() => { t.style.opacity = '0'; }, TOAST_LIFETIME);
+  setTimeout(() => {
+    const idx = _toastQueue.indexOf(t);
+    if (idx !== -1) _toastQueue.splice(idx, 1);
+    t.remove();
+    _positionToasts();
+  }, TOAST_LIFETIME + TOAST_FADEOUT + 50);
+}
+
+// ── CONFIRM MODAL (replaces native confirm()) ──
+function showConfirm(title, message) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-box">
+        <div class="confirm-title">${title}</div>
+        <div class="confirm-msg">${message}</div>
+        <div class="confirm-foot">
+          <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+          <button class="btn btn-danger" data-action="confirm">Delete</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('open'));
+
+    function close(val) {
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.remove(), 260);
+      resolve(val);
+    }
+    overlay.addEventListener('click', (e) => {
+      const action = e.target.dataset?.action;
+      if (action === 'cancel' || action === 'confirm') close(action === 'confirm');
+      else if (e.target === overlay) close(false);
+    });
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') close(false);
+      if (e.key === 'Enter') close(true);
+    });
+  });
+}
+
+// ── PROMPT MODAL (replaces native prompt()) ──
+function showPrompt(title, placeholder, defaultValue) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'prompt-overlay';
+    overlay.innerHTML = `
+      <div class="prompt-box">
+        <div class="prompt-title">${title}</div>
+        <div class="prompt-body">
+          <input class="fi" type="text" placeholder="${placeholder || ''}" value="${defaultValue || ''}" autofocus>
+        </div>
+        <div class="prompt-foot">
+          <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+          <button class="btn btn-primary" data-action="confirm">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+      overlay.querySelector('input').focus();
+    });
+
+    function close(val) {
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.remove(), 260);
+      resolve(val);
+    }
+    overlay.addEventListener('click', (e) => {
+      const action = e.target.dataset?.action;
+      if (action === 'cancel') close(null);
+      else if (action === 'confirm') close(overlay.querySelector('input').value);
+      else if (e.target === overlay) close(null);
+    });
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') close(null);
+      if (e.key === 'Enter') close(overlay.querySelector('input').value);
+    });
+  });
 }
 
 // ── MODAL ──
@@ -62,7 +156,7 @@ async function createProject() {
       note: '',
     };
     await saveProject(globalSettings.root_path, projectData);
-  } catch (e) { showToast('Error: ' + e, 'var(--red)'); return; }
+  } catch (e) { showToast('Could not create project', 'var(--red)'); return; }
   await loadProjects();
 
   closeModal();
@@ -160,10 +254,12 @@ function refreshInfoPanel() {
 
   const storageRows = document.getElementById('piStorageRows');
   if (storageRows) {
+    const toggleBtn = storageRows.querySelector('.storage-toggle');
+    const wasOpen = toggleBtn?.classList.contains('open');
     storageRows.innerHTML = folders.map(f => {
       const stats = folderStats[f.key];
       return `<div class="irow"><span class="ik">${f.key}/</span><span class="iv ${stats ? '' : 'warn'}">${stats ? formatBytes(stats.bytes) : '— empty'}</span></div>`;
-    }).join('');
+    }).join('') + `<button class="storage-toggle${wasOpen ? ' open' : ''}" onclick="this.classList.toggle('open');this.closest('.pi-storage').classList.toggle('expanded')">▸ Details</button>`;
   }
 
   document.getElementById('fhgrid').innerHTML = folders.slice(0, 6).map(f => {
@@ -249,7 +345,7 @@ async function handleDroppedFiles(paths) {
 
       imported++;
     } catch (err) {
-      showToast('Error: ' + String(err), 'var(--red)');
+    showToast('Import failed for some files', 'var(--red)');
     }
   }
 
@@ -290,4 +386,4 @@ function destFolderForExt(lowerExt) {
   return fallback ? fallback.folder_key : 'export';
 }
 
-export { showToast, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop }
+export { showToast, showConfirm, showPrompt, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop }

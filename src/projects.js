@@ -58,7 +58,7 @@ function renderProjects() {
   const pIndices = filtered.map(p => projects.indexOf(p));
 
     list.innerHTML = filtered.map((p, i) => `
-    <div class="pcard${p.active ? ' active' : ''}${p.thumb ? ' has-thumb' : ''}" onclick="selectProject(${pIndices[i]})" style="animation-delay:${i * .04}s${p.thumb ? `;background-image:url('${p.thumb}')` : ''}">
+    <div class="pcard${p.active ? ' active' : ''}${p.thumb ? ' has-thumb' : ''}" onclick="selectProject(${pIndices[i]})" tabindex="0" role="option" aria-selected="${p.active}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectProject(${pIndices[i]})}if(event.key==='ArrowDown'){event.preventDefault();const list=document.getElementById('plist');const cards=[...list.querySelectorAll('.pcard')];const idx=cards.indexOf(this);if(idx<cards.length-1)cards[idx+1].focus()}if(event.key==='ArrowUp'){event.preventDefault();const list=document.getElementById('plist');const cards=[...list.querySelectorAll('.pcard')];const idx=cards.indexOf(this);if(idx>0)cards[idx-1].focus()}" style="animation-delay:${i * .04}s${p.thumb ? `;background-image:url('${p.thumb}')` : ''}">
       <div class="pc-body">
         <div class="pc-name">${escapeHTML(p.name)}</div>
         <div class="pc-bot">
@@ -140,7 +140,7 @@ async function selectProject(i) {
       window._currentExports = rawExports;
       window._importedBases = (data.imported_bases || []).map(i => typeof i === 'string' ? { file: i, group: i.replace(/_[^_]+$/, ''), imported_at: null } : { ...i }).slice();
     }
-  } catch (e) { console.error('selectProject load error:', e); showToast('Error loading project: ' + e, 'var(--red)'); }
+  } catch (e) { console.error('selectProject load error:', e); showToast('Could not load project data', 'var(--red)'); }
 
   const rootLabel = globalSettings.root_path ? (isStreamerMode() ? 'Vault' : globalSettings.root_path.split(/[/\\]/).pop()) : '3D_Assets';
   const safeId = sanitizeProjectId(p.id, 'Project');

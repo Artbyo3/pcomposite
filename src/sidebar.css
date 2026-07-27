@@ -6,6 +6,7 @@
   .sb-top {
     padding:14px 12px 12px; position:relative;
     display:flex; flex-direction:column; gap:10px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 3%, var(--bg2)) 0%, var(--bg2) 100%);
   }
   .sb-top::after {
     content:''; position:absolute; bottom:0; left:12px; right:12px;
@@ -67,7 +68,8 @@
     background:linear-gradient(160deg,var(--bg4) 0%,var(--bg3) 100%);
     border-color:transparent;
     box-shadow:0 1px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.04),
-               inset 0 0 0 1px color-mix(in srgb,var(--accent) 15%,transparent);
+               inset 0 0 0 1px color-mix(in srgb,var(--accent) 15%,transparent),
+               inset 3px 0 0 var(--accent);
   }
   .pcard.active::before {
     background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 40%,rgba(255,255,255,.15)) 0%,color-mix(in srgb,var(--accent) 15%,rgba(255,255,255,.03)) 35%,transparent 65%);
