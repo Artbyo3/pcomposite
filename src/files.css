@@ -1,46 +1,18 @@
 .fgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
   .ftile {
     position: relative; border-radius: 16px; cursor: pointer; overflow: hidden; isolation: isolate;
-    padding: 1px; background: color-mix(in srgb, var(--fc) 30%, var(--bg3));
+    background: var(--bg3);
     transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s ease;
   }
-  .ftile::before {
-    content: ''; position: absolute; inset: 0; border-radius: 16px; padding: 1px;
-    background: linear-gradient(145deg,
-      color-mix(in srgb, var(--fc) 60%, white) 0%,
-      color-mix(in srgb, var(--fc) 20%, transparent) 50%,
-      transparent 100%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude;
-    pointer-events: none; z-index: 10; opacity: 0.7; transition: opacity 0.4s;
-  }
-  /* Wireframe corner handles — 3D viewport selection feel */
-  .ftile::after {
-    content: ''; position: absolute; top: 6px; left: 6px;
-    width: 10px; height: 10px; border-left: 1.5px solid color-mix(in srgb, var(--fc) 50%, transparent);
-    border-top: 1.5px solid color-mix(in srgb, var(--fc) 50%, transparent);
-    pointer-events: none; z-index: 11; opacity: 0; transition: opacity 0.3s;
-    border-radius: 2px 0 0 0;
-  }
-  .ftile:hover::after { opacity: 0.6; }
-  .ftile:hover::before { opacity: 1; }
+  .ftile::before { display: none; }
+  .ftile::after { display: none; }
   .ftile:hover {
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 24px 48px rgba(0,0,0,0.55),
-                0 0 0 1px color-mix(in srgb, var(--fc) 50%, transparent),
-                0 0 40px color-mix(in srgb, var(--fc) 15%, transparent);
+    transform: translateY(-3px);
+    box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--fc) 60%, transparent),
+                0 12px 32px rgba(0,0,0,.45);
   }
   .ftile.empty { opacity: 0.4; filter: grayscale(1); }
-  .ft-glow {
-    position: absolute; top: -40%; right: -20%;
-    width: 80%; height: 80%;
-    background: radial-gradient(circle, color-mix(in srgb, var(--fc) 70%, white) 0%, transparent 70%);
-    opacity: 0.18; pointer-events: none; z-index: 0;
-    transition: opacity 0.4s, transform 0.5s cubic-bezier(0.16,1,0.3,1);
-    border-radius: 50%;
-  }
-  .ftile:hover .ft-glow { opacity: 0.35; transform: scale(1.15) translate(-5%, 5%); }
+  .ft-glow { display: none; }
   .ft-content {
     position: relative; border-radius: 15px; z-index: 1; width: 100%;
     background: linear-gradient(145deg,
@@ -48,18 +20,16 @@
       color-mix(in srgb, var(--fc) 8%, var(--bg3)) 100%);
     display: flex; flex-direction: column; justify-content: flex-end;
     padding: 14px; min-height: 126px; overflow: hidden;
-    transition: background 0.4s;
+    border: 1px solid color-mix(in srgb, var(--fc) 25%, var(--border));
+    transition: background 0.4s, border-color 0.3s;
   }
   .ftile:hover .ft-content {
     background: linear-gradient(145deg,
       color-mix(in srgb, var(--fc) 28%, var(--bg3)) 0%,
       color-mix(in srgb, var(--fc) 12%, var(--bg3)) 100%);
+    border-color: color-mix(in srgb, var(--fc) 50%, transparent);
   }
-  .ft-content::after {
-    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 55%;
-    background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%);
-    pointer-events: none; border-radius: 0 0 15px 15px;
-  }
+  .ft-content::after { display: none; }
   .ft-icon {
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -54%);
@@ -67,6 +37,15 @@
     opacity: 0.65; pointer-events: none; user-select: none;
     transition: opacity 0.35s, transform 0.45s cubic-bezier(0.16,1,0.3,1);
     filter: drop-shadow(0 6px 20px rgba(0,0,0,0.6));
+  }
+  .ft-letter {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -54%);
+    font-size: 56px; font-weight: 800; letter-spacing: -2px;
+    color: rgba(255,255,255,.15); user-select: none;
+    font-family: 'Syne', sans-serif; line-height: 1;
+    pointer-events: none;
+    transition: opacity 0.35s;
   }
   .ftile:hover .ft-icon { opacity: 1; transform: translate(-50%, -58%) scale(1.1); }
   .ft-badge {
