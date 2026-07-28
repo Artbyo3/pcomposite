@@ -1,4 +1,4 @@
-import { escapeHTML } from './helpers.js';
+import { escapeHTML, getToolByFolderKey, getToolIcon } from './helpers.js';
 import { ALL_FILES, globalSettings, baseIdMap } from './state.js';
 import { readDir, exists, readFile } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
@@ -26,9 +26,11 @@ function buildExportSection() {
   }
   const sortedTargets = Object.keys(groups).sort();
 
+  const fbxTool = getToolByFolderKey('fbx');
+  const expIcon = fbxTool ? getToolIcon(fbxTool) : '<span class="icon-letter">E</span>';
   let html = '<div class="export-section">';
   html += '<div class="exp-header">';
-  html += '<span class="exp-header-icon">📦</span>';
+  html += `<span class="exp-header-icon">${expIcon}</span>`;
   html += '<span class="exp-header-title">EXPORTS</span>';
   html += '<span class="exp-header-count">' + sortedTargets.length + ' target' + (sortedTargets.length !== 1 ? 's' : '') + ' · ' + exports.length + ' version' + (exports.length !== 1 ? 's' : '') + ' · ' + fbxFiles.length + ' files</span>';
   html += '<button class="exp-header-btn sec" onclick="toggleAllCollapse()" id="expCollapseAllBtn">▲ All</button>';

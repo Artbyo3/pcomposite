@@ -71,7 +71,7 @@
     <!-- Project header -->
     <div class="phead">
       <div class="ph-top">
-        <div style="display:flex;align-items:center;gap:12px">
+        <div class="flex-row">
           <div id="phThumb" class="ph-thumb" onclick="triggerActiveThumb()" title="Set cover image">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           </div>
@@ -109,7 +109,7 @@
       <div class="vbody" id="vFolders">
         <div class="fgrid" id="fgrid"></div>
         <div class="dzone">
-          <div class="dz-ico"><img src="/dropfiles.png" width="28" height="28" style="object-fit:contain"></div>
+          <div class="dz-ico"><img src="/dropfiles.png" width="28" height="28"></div>
           <div class="dz-t">Drop files — PCOMPOSITE sorts them automatically</div>
           <div class="dz-s">.BLEND .SPP .FBX .PNG .MAT .ZIP and more</div>
         </div>
@@ -156,7 +156,7 @@
           <div class="progbar"><div class="progfill progfill-green" id="piFoldersFill" style="width:0%"></div></div>
         </div>
         <div class="progrow">
-          <div class="progtop"><span>Checklist</span><span class="iv" id="piCheckPct" style="color:var(--blue)">—</span></div>
+          <div class="progtop"><span>Checklist</span><span class="iv iv-blue" id="piCheckPct">—</span></div>
           <div class="progbar"><div class="progfill progfill-blue" id="piCheckFill" style="width:0%"></div></div>
         </div>
       </div>
@@ -315,8 +315,5 @@
 </div>
 
 <script type="module" src="/src/main.js"></script>
-<!-- impeccable-live-start -->
-<script src="http://localhost:8400/live.js?token=9ff7d967-0190-4353-ad64-701d3b6bce21"></script>
-<!-- impeccable-live-end -->
 </body>
 </html>

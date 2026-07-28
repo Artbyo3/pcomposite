@@ -47,7 +47,7 @@ function renderFileList(filterKey) {
 
   if (!files.length) {
     document.getElementById('fileListContent').innerHTML = toolbar + (exportSection || `<div class="file-empty">
-        <div class="file-empty-icon">${folder?.icon || '📁'}</div>
+        <div class="file-empty-icon">${folder?.icon || ''}</div>
         <div class="file-empty-text">This folder is empty</div>
         <div class="file-empty-sub">Drop files here — PCOMPOSITE sorts them automatically</div>
       </div>`);
@@ -341,14 +341,14 @@ function showCtx(e, idx) {
     </div>
     <div class="ctx-sep"></div>
     <div class="ctx-item" onclick="revealFile(${idx});removeCtx()">
-      <span class="ctx-ico">📂</span> Reveal in Explorer
+      <span class="ctx-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></span> Reveal in Explorer
     </div>
     <div class="ctx-item" onclick="copyPath(${idx});removeCtx()">
-      <span class="ctx-ico">📋</span> Copy File Path
+      <span class="ctx-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></span> Copy File Path
     </div>
     <div class="ctx-sep"></div>
     <div class="ctx-item" style="color:var(--red)" onclick="deleteFile(${idx});removeCtx()">
-      <span class="ctx-ico">🗑️</span> Remove from Project
+      <span class="ctx-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></span> Remove from Project
     </div>
   `;
   document.body.appendChild(menu);

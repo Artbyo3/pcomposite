@@ -193,5 +193,6 @@
   .dzone:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
   .dzone.dzone-over { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); transform:scale(1.03); }
   .dz-ico { display:flex; }
+  .dz-ico img { object-fit:contain; }
   .dz-t { font-size:12px; font-weight:600; }
   .dz-s { font-size:10px; font-family:'Space Mono',monospace; letter-spacing:1px; color:var(--text4); }

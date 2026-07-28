@@ -76,11 +76,7 @@ const OFFICIAL_TOOL_ICONS = {
   Blender: '<img src="/blender.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
   'Substance Painter': '<img src="/substance-3d-painter.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
   Unity: '<img src="/Unity.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
-  'FBX Exports': '<span style="font-size:1em">📦</span>',
-  Pictures: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-0.15em;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
-  'Promo Art': '<span style="font-size:1em">🖼️</span>',
   Resonite: '<img src="/RSN_Logomark_Color.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
-  Export: '<span style="font-size:1em">🚀</span>',
 };
 
 function _firstLetterIcon(name) {
@@ -89,7 +85,7 @@ function _firstLetterIcon(name) {
 }
 
 export function getToolIcon(tool) {
-  if (!tool) return '<span style="font-size:1em">📁</span>';
+  if (!tool) return _firstLetterIcon('?');
   return OFFICIAL_TOOL_ICONS[tool.name] || _firstLetterIcon(tool.name);
 }
 
@@ -113,10 +109,10 @@ export function getToolFolders() {
 }
 
 export function getStageIcon(stage) {
-  if (!stage) return '<span style="font-size:1em">📋</span>';
+  if (!stage) return _firstLetterIcon('?');
   const tools = globalSettings.tools || [];
   const tool = tools.find(t => t.id === stage.tool_id);
-  return tool ? getToolIcon(tool) : '<span style="font-size:1em">📋</span>';
+  return tool ? getToolIcon(tool) : _firstLetterIcon(stage.name || '?');
 }
 
 export function getStageColor(stage) {
@@ -128,12 +124,13 @@ const APP_ICON_MAP = {
   'Substance Painter': '<img src="/substance-3d-painter.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
   Painter: '<img src="/substance-3d-painter.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
   Unity:   '<img src="/Unity.svg" style="width:1em;height:1em;vertical-align:-0.15em;">',
-  Viewer: '<span style="font-size:1em">🖼️</span>',
-  Explorer: '<span style="font-size:1em">📂</span>',
 };
 
 export function getAppIcon(appName) {
-  return APP_ICON_MAP[appName] || '<span style="font-size:1em">📄</span>';
+  if (APP_ICON_MAP[appName]) return APP_ICON_MAP[appName];
+  const tools = globalSettings.tools || [];
+  const tool = tools.find(t => t.name === appName);
+  return tool ? getToolIcon(tool) : _firstLetterIcon(appName);
 }
 
 export function getToolByFolderKey(folderKey) {

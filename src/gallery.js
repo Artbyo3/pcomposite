@@ -58,7 +58,7 @@ function buildDateLookup(filtered) {
 function calItemHtml(pi) {
   const pp = projects[pi];
   return `<div class="cal-item gal-cal-item" onclick="event.stopPropagation();openFromGallery(${pi})" title="${escapeHTML(pp.name)}">
-    ${pp.thumb ? `<img src="${pp.thumb}" class="cal-item-thumb">` : `<div class="cal-item-no-thumb">📄</div>`}
+    ${pp.thumb ? `<img src="${pp.thumb}" class="cal-item-thumb">` : `<div class="cal-item-no-thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
     <span>${escapeHTML(pp.name)}</span>
   </div>`;
 }
@@ -71,7 +71,7 @@ function unscheduledItemHtml(pi) {
   const stageColor = getStageColor(s);
   return `<div class="us-card" title="${escapeHTML(pp.name)}">
     <div class="us-thumb" onclick="openFromGallery(${pi})">
-      ${pp.thumb ? `<img src="${pp.thumb}">` : `<div class="us-thumb-ph">📄</div>`}
+      ${pp.thumb ? `<img src="${pp.thumb}">` : `<div class="us-thumb-ph"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
     </div>
     <div class="us-body">
       <div class="us-name" onclick="openFromGallery(${pi})">${escapeHTML(pp.name)}</div>

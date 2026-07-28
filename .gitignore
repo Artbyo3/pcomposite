@@ -53,3 +53,12 @@ tauri_help.txt
 
 # TypeScript
 *.tsbuildinfo
+
+# AI tool configs (local only)
+.impeccable/
+.opencode/
+.agents/
+.claude/
+.codex/
+.cursor/
+.gemini/
