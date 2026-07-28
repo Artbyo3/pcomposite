@@ -62,3 +62,7 @@ tauri_help.txt
 .codex/
 .cursor/
 .gemini/
+
+# Impeccable generated context
+DESIGN.md
+PRODUCT.md

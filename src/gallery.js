@@ -108,7 +108,7 @@ function renderGallery() {
       <div class="gcard ${p.active ? 'active-proj' : ''}" style="animation-delay:${i * .03}s" onclick="openFromGallery(${idx})">
         <div class="gthumb">
           ${p.thumb ? `<img src="${p.thumb}">` : `<div class="gthumb-placeholder"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span style="font-size:10px;font-family:'Space Mono',monospace;letter-spacing:1px">NO IMAGE</span></div>`}
-          <div class="gthumb-upload" onclick="event.stopPropagation();triggerThumb(${idx})">📷 SET IMAGE</div>
+          <div class="gthumb-upload" onclick="event.stopPropagation();triggerThumb(${idx})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> SET IMAGE</div>
         </div>
         <div class="gstage-bar"><div class="gstage-fill" style="width:${pct}%;background:${stageColor}"></div></div>
         <div class="ginfo">
@@ -366,7 +366,7 @@ function galCalSetView(view) {
 
 function galCalSetRelease(dateStr) {
   const p = projects.find(x => x.active);
-  if (!p) { showToast('Select a project first in the sidebar, or use 📅 in Unscheduled', 'var(--orange)'); return; }
+  if (!p) { showToast('Select a project first in the sidebar, or use the Unscheduled view', 'var(--orange)'); return; }
   const idx = projects.indexOf(p);
   p.release_date = p.release_date === dateStr ? null : dateStr;
   saveReleaseDate(p);
