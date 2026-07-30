@@ -262,7 +262,7 @@ function refreshInfoPanel() {
     }).join('') + `<button class="storage-toggle${wasOpen ? ' open' : ''}" onclick="this.classList.toggle('open');this.closest('.pi-storage').classList.toggle('expanded')">▸ Details</button>`;
   }
 
-  document.getElementById('fhgrid').innerHTML = folders.slice(0, 6).map(f => {
+  document.getElementById('fhgrid').innerHTML = folders.map(f => {
     const stats = folderStats[f.key] || { count: 0, bytes: 0 };
     return `<div class="fhcard" onclick="drillFolder('${f.key}')"><div class="fh-n">${f.key}/</div><div class="fh-v" style="color:${f.color}">${stats.count}</div><div class="fh-s">${stats.count > 0 ? formatBytes(stats.bytes) : 'empty'}</div></div>`;
   }).join('');
