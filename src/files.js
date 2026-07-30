@@ -205,16 +205,24 @@ async function openFile(idx) {
   }
 
   let exePath = { Blender: globalSettings.blender_path, 'Substance Painter': globalSettings.painter_path, Painter: globalSettings.painter_path, Unity: globalSettings.unity_path }[f.app] || '';
+  let aumid = '';
 
   if (!exePath && f.app !== 'Viewer' && f.app !== 'Explorer') {
     const tools = globalSettings.tools || [];
     const tool = tools.find(t => t.name === f.app);
-    if (tool && tool.exe_path) exePath = tool.exe_path;
+    if (tool) {
+      if (tool.exe_path) exePath = tool.exe_path;
+      else if (tool.aumid) aumid = tool.aumid;
+    }
   }
 
   try {
     if (exePath) {
       await invoke('open_in_app', { exePath, filePath: targetPath });
+      showToast('Launched ' + f.app, 'var(--green)');
+      logAction(`Opened ${f.name} in ${f.app}`, 'ok');
+    } else if (aumid) {
+      await invoke('launch_msix', { aumid, filePath: targetPath });
       showToast('Launched ' + f.app, 'var(--green)');
       logAction(`Opened ${f.name} in ${f.app}`, 'ok');
     } else {

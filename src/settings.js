@@ -398,6 +398,11 @@ window.showToolForm = function(toolId) {
             <button onclick="browseFilePath('wf_toolExe')" class="set-browse" title="Browse"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
           </div>
         </div>
+        <div class="fg">
+          <label class="fl">AppUserModelId <span style="color:var(--text3);font-weight:normal">(MSIX apps)</span></label>
+          <input id="wf_toolAumid" class="fi" placeholder="e.g. Serif.Affinity.Photo_5f8r3wxxqde32!App" value="${escapeHTML(tool?.aumid || '')}">
+          <div class="wf-meta" style="margin-top:3px">For Store/MSIX apps without a traditional exe path</div>
+        </div>
       </div>
       <div class="mfoot">
         <button class="btn btn-secondary" onclick="closeToolForm()">Cancel</button>
@@ -421,6 +426,7 @@ window.saveToolFromForm = async function() {
   const folderKey = document.getElementById('wf_toolFolder')?.value.trim();
   const color = document.getElementById('wf_toolColor')?.value;
   const exePath = document.getElementById('wf_toolExe')?.value.trim() || '';
+  const aumid = document.getElementById('wf_toolAumid')?.value.trim() || '';
 
   if (!name) { showToast('Tool name is required', 'var(--orange)'); return; }
   if (!folderKey) { showToast('Folder key is required', 'var(--orange)'); return; }
@@ -436,10 +442,10 @@ window.saveToolFromForm = async function() {
 
   if (_editingToolId) {
     const idx = tools.findIndex(t => t.id === _editingToolId);
-    if (idx >= 0) tools[idx] = { ...tools[idx], name, folder_key: folderKey, color, exe_path: exePath };
+    if (idx >= 0) tools[idx] = { ...tools[idx], name, folder_key: folderKey, color, exe_path: exePath, aumid };
   } else {
     const maxOrder = tools.reduce((m, t) => Math.max(m, t.order), -1);
-    tools.push({ id:'tool_' + generateId(), name, folder_key: folderKey, color, exe_path: exePath, tier:'custom', capabilities:[], order: maxOrder + 1 });
+    tools.push({ id:'tool_' + generateId(), name, folder_key: folderKey, color, exe_path: exePath, aumid, tier:'custom', capabilities:[], order: maxOrder + 1 });
   }
 
   globalSettings.tools = tools;

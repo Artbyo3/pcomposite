@@ -2,6 +2,8 @@ use tauri::Manager;
 
 #[cfg(target_os = "windows")]
 mod drag;
+#[cfg(target_os = "windows")]
+mod msix;
 
 #[cfg(target_os = "windows")]
 #[tauri::command]
@@ -67,6 +69,16 @@ fn focus_blender() -> Result<(), String> {
 fn focus_blender() -> Result<(), String> {
     Err("Focus Blender is only supported on Windows".to_string())
 }
+#[cfg(target_os = "windows")]
+#[tauri::command]
+fn launch_msix(aumid: String, file_path: String) -> Result<(), String> {
+    msix::launch_msix(&aumid, &file_path)
+}
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn launch_msix() -> Result<(), String> {
+    Err("MSIX app launch is only supported on Windows".to_string())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -75,7 +87,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![open_in_app, run_command, spawn_command, drag_addon, focus_blender])
+        .invoke_handler(tauri::generate_handler![open_in_app, run_command, spawn_command, drag_addon, focus_blender, launch_msix])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
