@@ -365,6 +365,7 @@ window.showToolForm = function(toolId) {
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
   overlay.id = 'toolFormOverlay';
+  overlay.style.zIndex = '950';
   overlay.onclick = (e) => { if (e.target === overlay) closeToolForm(); };
 
   overlay.innerHTML = `
@@ -496,6 +497,7 @@ window.showStageForm = function(idx) {
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
   overlay.id = 'stageFormOverlay';
+  overlay.style.zIndex = '950';
   overlay.onclick = (e) => { if (e.target === overlay) closeStageForm(); };
 
   overlay.innerHTML = `
