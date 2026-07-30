@@ -392,16 +392,16 @@ window.showToolForm = function(toolId) {
           <input id="wf_toolColor" type="hidden" value="${currentColor}">
         </div>
         <div class="fg">
-          <label class="fl">Executable Path (optional)</label>
+          <label class="fl">Launch Method</label>
           <div class="set-path-row">
-            <input id="wf_toolExe" class="fi" placeholder="Not set" value="${escapeHTML(tool?.exe_path || '')}">
+            <input id="wf_toolExe" class="fi" placeholder="Browse for .exe or tap Detect" value="${escapeHTML(tool?.exe_path || '')}">
             <button onclick="browseFilePath('wf_toolExe')" class="set-browse" title="Browse"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
           </div>
-        </div>
-        <div class="fg">
-          <label class="fl">AppUserModelId <span style="color:var(--text3);font-weight:normal">(MSIX apps)</span></label>
-          <input id="wf_toolAumid" class="fi" placeholder="e.g. Serif.Affinity.Photo_5f8r3wxxqde32!App" value="${escapeHTML(tool?.aumid || '')}">
-          <div class="wf-meta" style="margin-top:3px">For Store/MSIX apps without a traditional exe path</div>
+          <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
+            <button onclick="detectApps()" class="btn btn-ghost" style="font-size:11px;padding:3px 8px" type="button">Detect installed apps...</button>
+            <span id="wf_aumidBadge" style="${tool?.aumid ? '' : 'display:none'};font-size:10px;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:4px">MSIX app</span>
+            <input id="wf_toolAumid" type="hidden" value="${escapeHTML(tool?.aumid || '')}">
+          </div>
         </div>
       </div>
       <div class="mfoot">
@@ -455,6 +455,81 @@ window.saveToolFromForm = async function() {
     renderSettings();
     showToast('Tool saved', 'var(--green)');
   } catch (e) { showToast('Could not save tool', 'var(--red)'); }
+};
+
+let _detectOverlay = null;
+window.detectApps = async function() {
+  if (_detectOverlay) return;
+  const raw = await invoke('detect_installed_apps').catch(() => '[]');
+  let list;
+  try { list = JSON.parse(raw); if (!Array.isArray(list)) list = [list]; } catch(e) { list = []; }
+  const filtered = list.filter(a => a.AppID && a.Name && !a.Name.includes('Settings') && !a.Name.includes('Microsoft'));
+  filtered.sort((a,b) => a.Name.localeCompare(b.Name));
+
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.style.zIndex = '960';
+  _detectOverlay = ov;
+  ov.onclick = e => { if (e.target === ov) closeDetectOverlay(); };
+
+  ov.innerHTML = `
+    <div class="modal" style="width:460px;max-height:520px">
+      <div class="mhead">
+        <span class="mtitle">Installed Apps</span>
+        <button class="mclose" onclick="closeDetectOverlay()">✕</button>
+      </div>
+      <div class="mbody2" style="padding:8px">
+        <input id="detectSearch" class="fi" placeholder="Search apps..." style="margin-bottom:6px" oninput="filterDetectList()">
+        <div id="detectList" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:2px">
+          ${filtered.map(a => {
+            const isMsix = a.AppID.includes('!');
+            return `<div class="detect-row" data-appid="${escapeHTML(a.AppID)}" data-name="${escapeHTML(a.Name)}" onclick="selectDetectedApp(this)">
+              <span>${escapeHTML(a.Name)}</span>
+              <span style="font-size:9px;color:var(--text3)">${isMsix ? 'MSIX' : 'EXE'}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => {
+    ov.classList.add('open');
+    document.getElementById('detectSearch')?.focus();
+  });
+};
+
+window.filterDetectList = function() {
+  const q = (document.getElementById('detectSearch')?.value || '').toLowerCase();
+  document.querySelectorAll('.detect-row').forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+};
+
+window.selectDetectedApp = function(row) {
+  const name = row.dataset.name;
+  const appId = row.dataset.appid;
+  const isMsix = appId.includes('!');
+
+  document.getElementById('wf_toolName').value = name;
+  document.getElementById('wf_toolFolder').value = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  if (isMsix) {
+    document.getElementById('wf_toolExe').value = '';
+    document.getElementById('wf_toolAumid').value = appId;
+    const badge = document.getElementById('wf_aumidBadge');
+    if (badge) badge.style.display = '';
+  } else {
+    document.getElementById('wf_toolExe').value = appId;
+    document.getElementById('wf_toolAumid').value = '';
+    const badge = document.getElementById('wf_aumidBadge');
+    if (badge) badge.style.display = 'none';
+  }
+  closeDetectOverlay();
+};
+
+window.closeDetectOverlay = function() {
+  if (_detectOverlay) { _detectOverlay.remove(); _detectOverlay = null; }
 };
 
 window.deleteTool = async function(toolId) {
