@@ -1,5 +1,5 @@
 import { projects, ALL_FILES, sessionNote, globalSettings, galCalView, setGalCalView, galCalYear, setGalCalYear, galCalMonth, setGalCalMonth, galCalDay, setGalCalDay, _galCalDateTarget, setGalCalDateTarget, galleryFilter, setGalleryFilter as setGalleryFilterState, galleryView, setGalleryView as setGalleryViewState } from './state.js';
-import { escapeHTML, getDateStr, sanitizeProjectId, getToolFolders, getPipelineLength, getStageLabel, getStageColor } from './helpers.js';
+import { escapeHTML, getDateStr, sanitizeProjectId, getPipelineLength, getStageLabel, getStageColor, renderStageDots } from './helpers.js';
 import { MONTH_NAMES, DAY_NAMES_SHORT } from './constants.js';
 import { saveProject } from './data.js';
 import { showToast } from './ui.js';
@@ -105,7 +105,7 @@ function renderGallery() {
     const stageLabel = getStageLabel(s);
     const idx = projects.indexOf(p);
     return `
-      <div class="gcard ${p.active ? 'active-proj' : ''}" style="animation-delay:${i * .03}s" onclick="openFromGallery(${idx})">
+      <div class="gcard ${p.active ? 'active-proj' : ''}" style="animation-delay:${i * .03}s" tabindex="0" role="option" aria-selected="${p.active}" aria-label="${escapeHTML(p.name)}" onclick="openFromGallery(${idx})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFromGallery(${idx})}if(event.key==='ArrowDown'){event.preventDefault();const cards=[...document.getElementById('galleryGrid').querySelectorAll('.gcard')];const idx=cards.indexOf(this);if(idx<cards.length-1)cards[idx+1].focus()}if(event.key==='ArrowUp'){event.preventDefault();const cards=[...document.getElementById('galleryGrid').querySelectorAll('.gcard')];const idx=cards.indexOf(this);if(idx>0)cards[idx-1].focus()}">
         <div class="gthumb">
           ${p.thumb ? `<img src="${p.thumb}">` : `<div class="gthumb-placeholder"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span style="font-size:10px;font-family:'Space Mono',monospace;letter-spacing:1px">NO IMAGE</span></div>`}
           <div class="gthumb-upload" onclick="event.stopPropagation();triggerThumb(${idx})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> SET IMAGE</div>
@@ -119,7 +119,7 @@ function renderGallery() {
           </div>
           <div class="g-meta">
             <span class="g-date">${p.date}</span>
-            <div class="g-dots">${getToolFolders().map((f, fi) => `<div class="fmd ${fi < p.stage ? 'has' : ''}" style="background:${f.color};width:5px;height:5px;border-radius:1px"></div>`).join('')}</div>
+            <div class="g-dots">${renderStageDots(p.stage)}</div>
           </div>
         </div>
       </div>

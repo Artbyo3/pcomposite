@@ -100,6 +100,7 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('click', removeCtx);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { removeCtx(); closeModal(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeGallery(); } });
 
 // ── WINDOW EXPORTS ──
 Object.assign(window, {

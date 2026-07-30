@@ -1,5 +1,5 @@
 import { join } from '@tauri-apps/api/path';
-import { escapeHTML, formatBytes, sanitizeProjectId, isStreamerMode, getToolFolders, getFolderMeta, getPipelineLength, getStageIcon, getStageColor } from './helpers.js';
+import { escapeHTML, formatBytes, sanitizeProjectId, isStreamerMode, getFolderMeta, getPipelineLength, getStageIcon, getStageColor, renderStageDots } from './helpers.js';
 import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, setCurrentFolder, currentSort, activeFilters } from './state.js';
 import { loadProject, saveProject, syncProjectFiles, scanVault } from './data.js';
 import { showToast, setVTab } from './ui.js';
@@ -64,7 +64,7 @@ function renderProjects() {
         <div class="pc-bot">
           <span class="pc-date">${p.date}</span>
           <div class="fmini">
-            ${getToolFolders().map((f, fi) => `<div class="fmd ${fi < p.stage ? 'has' : ''}" style="background:${f.color}"></div>`).join('')}
+            ${renderStageDots(p.stage)}
           </div>
         </div>
       </div>

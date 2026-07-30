@@ -149,3 +149,9 @@ export function getPipelineLength() {
 export function getStageLabel(stage) {
   return stage?.name || '';
 }
+
+export function renderStageDots(stage) {
+  return getToolFolders().map((f, fi) =>
+    `<div class="fmd ${fi < stage ? 'has' : ''}" style="background:${f.color}"></div>`
+  ).join('');
+}
