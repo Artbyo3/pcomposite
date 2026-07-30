@@ -222,16 +222,23 @@ async function openFile(idx) {
       showToast('Launched ' + f.app, 'var(--green)');
       logAction(`Opened ${f.name} in ${f.app}`, 'ok');
     } else if (aumid) {
-      await invoke('launch_msix', { aumid, filePath: targetPath });
-      showToast('Launched ' + f.app, 'var(--green)');
-      logAction(`Opened ${f.name} in ${f.app}`, 'ok');
+      try {
+        await invoke('launch_msix', { aumid, filePath: targetPath });
+        showToast('Launched ' + f.app, 'var(--green)');
+        logAction(`Opened ${f.name} in ${f.app}`, 'ok');
+      } catch (msixErr) {
+        console.warn('MSIX launch failed, falling back to system default:', msixErr);
+        await openPath(targetPath);
+        showToast('Opened ' + f.name + ' (system default)', 'var(--yellow)');
+        logAction(`Opened ${f.name} via fallback`, 'ok');
+      }
     } else {
       await openPath(targetPath);
       showToast('Opened ' + f.name, 'var(--green)');
       logAction(`Opened ${f.name}`, 'ok');
     }
   } catch (err) {
-    showToast('Could not open ' + f.app, 'var(--red)');
+    showToast('Could not open ' + f.name + ': ' + (err.message || err), 'var(--red)');
     logAction(`Failed to open ${f.name}`, 'err');
   }
 }
