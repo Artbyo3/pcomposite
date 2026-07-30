@@ -207,8 +207,11 @@ async function openFile(idx) {
   let exePath = { Blender: globalSettings.blender_path, 'Substance Painter': globalSettings.painter_path, Painter: globalSettings.painter_path, Unity: globalSettings.unity_path }[f.app] || '';
 
   if (!exePath && f.app !== 'Viewer' && f.app !== 'Explorer') {
-    showToast('No executable set for ' + f.app + ' in Settings', 'var(--orange)'); return;
+    const tools = globalSettings.tools || [];
+    const tool = tools.find(t => t.name === f.app);
+    if (tool && tool.exe_path) exePath = tool.exe_path;
   }
+
   try {
     if (exePath) {
       await invoke('open_in_app', { exePath, filePath: targetPath });
