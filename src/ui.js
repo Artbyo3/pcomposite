@@ -249,20 +249,9 @@ function refreshInfoPanel() {
   if (checkSpan)   checkSpan.textContent   = `${ckDone} / ${ckTotal}`;
   if (checkFill)   checkFill.style.width   = ckPct + '%';
 
-  const totalSizeEl = document.getElementById('piTotalSize');
-  if (totalSizeEl) totalSizeEl.textContent = formatBytes(totalBytes);
-
-  const storageRows = document.getElementById('piStorageRows');
-  if (storageRows) {
-    const toggleBtn = storageRows.querySelector('.storage-toggle');
-    const wasOpen = toggleBtn?.classList.contains('open');
-    storageRows.innerHTML = folders.map(f => {
-      const stats = folderStats[f.key];
-      return `<div class="irow"><span class="ik">${f.key}/</span><span class="iv ${stats ? '' : 'warn'}">${stats ? formatBytes(stats.bytes) : '— empty'}</span></div>`;
-    }).join('') + `<button class="storage-toggle${wasOpen ? ' open' : ''}" onclick="this.classList.toggle('open');this.closest('.pi-storage').classList.toggle('expanded')">▸ Details</button>`;
-  }
-
-  document.getElementById('fhgrid').innerHTML = folders.map(f => {
+  document.getElementById('fhgrid').innerHTML =
+    `<div class="fh-total">${formatBytes(totalBytes)} total across ${totalFolders} folders</div>` +
+    folders.map(f => {
     const stats = folderStats[f.key] || { count: 0, bytes: 0 };
     return `<div class="fhcard" onclick="drillFolder('${f.key}')"><div class="fh-n">${f.key}/</div><div class="fh-v" style="color:${f.color}">${stats.count}</div><div class="fh-s">${stats.count > 0 ? formatBytes(stats.bytes) : 'empty'}</div></div>`;
   }).join('');
