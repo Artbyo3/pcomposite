@@ -76,7 +76,7 @@ function unscheduledItemHtml(pi) {
     <div class="us-body">
       <div class="us-name" onclick="openFromGallery(${pi})">${escapeHTML(pp.name)}</div>
       <div class="us-meta">
-        <span class="us-stage" style="background:${stageColor}18;color:${stageColor}">${stageLabel}</span>
+        <span class="us-stage" style="background:color-mix(in srgb, ${stageColor} 18%, transparent);color:${stageColor}">${stageLabel}</span>
         <span class="us-date">created ${pp.date}</span>
       </div>
     </div>
@@ -94,8 +94,8 @@ function renderGallery() {
   const filtered = getFilteredProjects();
 
   const grid = document.getElementById('galleryGrid');
-  grid.style.display = 'grid';
-  if (!filtered.length) { grid.innerHTML = `<div style="grid-column:1/-1;padding:60px;text-align:center;font-size:11px;font-family:'Space Mono',monospace;color:var(--text3)">No projects found</div>`; return; }
+  grid.style.display = 'flex';
+  if (!filtered.length) { grid.innerHTML = `<div class="g-empty">No projects found</div>`; return; }
 
   grid.innerHTML = filtered.map((p, i) => {
     const pipeLen = stages.length;
@@ -107,14 +107,14 @@ function renderGallery() {
     return `
       <div class="gcard ${p.active ? 'active-proj' : ''}" style="animation-delay:${i * .03}s" tabindex="0" role="option" aria-selected="${p.active}" aria-label="${escapeHTML(p.name)}" onclick="openFromGallery(${idx})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFromGallery(${idx})}if(event.key==='ArrowDown'){event.preventDefault();const cards=[...document.getElementById('galleryGrid').querySelectorAll('.gcard')];const idx=cards.indexOf(this);if(idx<cards.length-1)cards[idx+1].focus()}if(event.key==='ArrowUp'){event.preventDefault();const cards=[...document.getElementById('galleryGrid').querySelectorAll('.gcard')];const idx=cards.indexOf(this);if(idx>0)cards[idx-1].focus()}">
         <div class="gthumb">
-          ${p.thumb ? `<img src="${p.thumb}">` : `<div class="gthumb-placeholder"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span style="font-size:10px;font-family:'Space Mono',monospace;letter-spacing:1px">NO IMAGE</span></div>`}
+          ${p.thumb ? `<img src="${p.thumb}">` : `<div class="gthumb-spacer"></div><div class="gthumb-placeholder"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span style="font-size:10px;font-family:'Space Mono',monospace;letter-spacing:1px">NO IMAGE</span></div>`}
           <div class="gthumb-upload" onclick="event.stopPropagation();triggerThumb(${idx})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> SET IMAGE</div>
         </div>
         <div class="gstage-bar"><div class="gstage-fill" style="width:${pct}%;background:${stageColor}"></div></div>
         <div class="ginfo">
           <div class="g-id">${sanitizeProjectId(p.id)}</div>
           <div class="g-name">${escapeHTML(p.name)}</div>
-          <div class="g-stage-label" style="background:${stageColor}18;color:${stageColor}">
+          <div class="g-stage-label" style="background:color-mix(in srgb, ${stageColor} 18%, transparent);color:${stageColor}">
             <span style="width:5px;height:5px;border-radius:50%;background:${stageColor};display:inline-block"></span> ${stageLabel}
           </div>
           <div class="g-meta">
@@ -172,9 +172,9 @@ function renderCalYear(grid) {
   grid.innerHTML = `
     <div class="cal-wrap">
       <div class="cal-head">
-        <button onclick="galCalPrev()">◀</button>
+        <button onclick="galCalPrev()" aria-label="Previous"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
         <div class="cal-title">${galCalYear}</div>
-        <button onclick="galCalNext()">▶</button>
+        <button onclick="galCalNext()" aria-label="Next"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg></button>
         <button class="cal-today" onclick="galCalToday()">Today</button>
         <div class="cal-view-toggle">
           <button class="${galCalView==='year'?'on':''}" onclick="galCalSetView('year')">Year</button>
@@ -222,9 +222,9 @@ function renderCalMonth(grid) {
   grid.innerHTML = `
     <div class="cal-wrap">
       <div class="cal-head">
-        <button onclick="galCalPrev()">◀</button>
+        <button onclick="galCalPrev()" aria-label="Previous"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
         <div class="cal-title">${MONTH_NAMES[galCalMonth]} ${galCalYear}</div>
-        <button onclick="galCalNext()">▶</button>
+        <button onclick="galCalNext()" aria-label="Next"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg></button>
         <button class="cal-today" onclick="galCalToday()">Today</button>
         <div class="cal-view-toggle">
           <button class="${galCalView==='year'?'on':''}" onclick="galCalSetView('year')">Year</button>
@@ -279,9 +279,9 @@ function renderCalWeek(grid) {
   grid.innerHTML = `
     <div class="cal-wrap">
       <div class="cal-head">
-        <button onclick="galCalPrev()">◀</button>
+        <button onclick="galCalPrev()" aria-label="Previous"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
         <div class="cal-title">${titleStr}</div>
-        <button onclick="galCalNext()">▶</button>
+        <button onclick="galCalNext()" aria-label="Next"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg></button>
         <button class="cal-today" onclick="galCalToday()">Today</button>
         <div class="cal-view-toggle">
           <button class="${galCalView==='year'?'on':''}" onclick="galCalSetView('year')">Year</button>

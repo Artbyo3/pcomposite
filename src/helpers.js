@@ -116,7 +116,7 @@ export function getStageIcon(stage) {
 }
 
 export function getStageColor(stage) {
-  return stage?.color || 'var(--text3)';
+  return stage?.color || '#6a6a80';
 }
 
 const APP_ICON_MAP = {

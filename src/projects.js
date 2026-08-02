@@ -1,6 +1,6 @@
 import { join } from '@tauri-apps/api/path';
 import { escapeHTML, formatBytes, sanitizeProjectId, isStreamerMode, getFolderMeta, getPipelineLength, getStageIcon, getStageColor, renderStageDots } from './helpers.js';
-import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, setCurrentFolder, currentSort, activeFilters } from './state.js';
+import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, setCurrentFolder, currentFolder, currentSort, activeFilters } from './state.js';
 import { loadProject, saveProject, syncProjectFiles, scanVault } from './data.js';
 import { showToast, setVTab } from './ui.js';
 import { updateHeaderThumb } from './thumbnail.js';
@@ -93,28 +93,19 @@ async function selectProject(i) {
 
   try {
     const data = await loadProject(globalSettings.root_path, p.id, p.name);
-    ALL_FILES.length = 0;
     let projectDir = globalSettings.root_path ? await join(globalSettings.root_path, p.id + '_' + p.name) : '';
     if (projectDir) projectDir = projectDir.replace(/\\/g, '/');
 
-    // Sync files from disk and merge with project.json
+    // Sync files from disk (source of truth) and merge with project.json metadata
     const diskFiles = globalSettings.root_path ? await syncProjectFiles(globalSettings.root_path, p.id, p.name) : [];
     const jsonFiles = (data && data.files) || [];
+    const missingKeys = await applyFileSync(projectDir, diskFiles, jsonFiles);
 
-    // Merge: prefer JSON version (has app metadata), add disk-only files
-    const seen = new Set();
-    for (const f of jsonFiles) {
-      const key = f.folder + '/' + f.name;
-      seen.add(key);
-      const meta = getFolderMeta(f.folder);
-      ALL_FILES.push({ name: f.name, folder: f.folder, ext: f.ext, size: formatBytes(f.size_bytes), sizeBytes: f.size_bytes, date: f.created_at, app: f.app, icon: meta.icon, ec: meta.color, _path: projectDir ? projectDir + '/' + f.folder + '/' + f.name : '' });
-    }
-    for (const f of diskFiles) {
-      const key = f.folder + '/' + f.name;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const meta = getFolderMeta(f.folder);
-      ALL_FILES.push({ name: f.name, folder: f.folder, ext: f.ext, size: formatBytes(f.size_bytes), sizeBytes: f.size_bytes, date: f.created_at, app: f.app, icon: meta.icon, ec: meta.color, _path: projectDir ? projectDir + '/' + f.folder + '/' + f.name : '' });
+    // Prune JSON entries that no longer exist on disk (deleted outside the app)
+    if (missingKeys.size && data) {
+      data.files = jsonFiles.filter(f => !missingKeys.has(f.folder + '/' + f.name));
+      try { await saveProject(globalSettings.root_path, data); }
+      catch (e) { console.warn('Could not prune deleted files from project data', e); }
     }
 
     if (data) {
@@ -163,4 +154,63 @@ async function selectProject(i) {
   await writeBridgeContext();
 }
 
-export { loadProjects, renderProjects, selectProject, saveActiveProject };
+// ── FILE SYNC (disk is the source of truth) ──
+
+// Build ALL_FILES from disk records, enriched with saved JSON metadata (app, created_at).
+// Returns the set of JSON-only keys that no longer exist on disk (e.g. deleted in Explorer).
+async function applyFileSync(projectDir, diskFiles, jsonFiles) {
+  const diskMap = new Map();
+  for (const f of diskFiles) diskMap.set(f.folder + '/' + f.name, f);
+
+  for (const f of jsonFiles) {
+    const diskF = diskMap.get(f.folder + '/' + f.name);
+    if (diskF) {
+      diskF.app = f.app || diskF.app;
+      diskF.created_at = f.created_at || diskF.created_at;
+    }
+  }
+
+  const missingKeys = new Set(
+    jsonFiles.filter(f => !diskMap.has(f.folder + '/' + f.name)).map(f => f.folder + '/' + f.name)
+  );
+
+  ALL_FILES.length = 0;
+  for (const f of diskMap.values()) {
+    const meta = getFolderMeta(f.folder);
+    ALL_FILES.push({ name: f.name, folder: f.folder, ext: f.ext, size: formatBytes(f.size_bytes), sizeBytes: f.size_bytes, date: f.created_at, app: f.app, icon: meta.icon, ec: meta.color, _path: projectDir ? projectDir + '/' + f.folder + '/' + f.name : '' });
+  }
+  return missingKeys;
+}
+
+// Re-read the active project from disk and refresh whatever view is showing.
+// Used when the window regains focus so external file changes (Explorer deletes) show up.
+async function resyncActiveProject() {
+  const p = projects.find(x => x.active);
+  if (!p || !globalSettings.root_path) return;
+  try {
+    let projectDir = globalSettings.root_path ? await join(globalSettings.root_path, p.id + '_' + p.name) : '';
+    if (projectDir) projectDir = projectDir.replace(/\\/g, '/');
+
+    const data = await loadProject(globalSettings.root_path, p.id, p.name);
+    const diskFiles = await syncProjectFiles(globalSettings.root_path, p.id, p.name);
+    const jsonFiles = (data && data.files) || [];
+    const missingKeys = await applyFileSync(projectDir, diskFiles, jsonFiles);
+
+    if (missingKeys.size && data) {
+      data.files = jsonFiles.filter(f => !missingKeys.has(f.folder + '/' + f.name));
+      try { await saveProject(globalSettings.root_path, data); }
+      catch (e) { console.warn('Could not prune deleted files from project data', e); }
+    }
+
+    // Re-render the current view without resetting navigation
+    const vFiles = document.getElementById('vFiles');
+    if (vFiles && vFiles.style.display !== 'none') {
+      const { renderFileList } = await import('./files.js');
+      renderFileList(currentFolder);
+    } else {
+      refreshFolders();
+    }
+  } catch (e) { console.error('resyncActiveProject error:', e); }
+}
+
+export { loadProjects, renderProjects, selectProject, saveActiveProject, resyncActiveProject };

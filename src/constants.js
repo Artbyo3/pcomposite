@@ -1,12 +1,12 @@
 export const DEFAULT_TOOLS = [
-  { id:'tool_blender',   name:'Blender',           folder_key:'blender',   color:'#ff6b35', exe_path:'', tier:'official', capabilities:['create_file','open_file','bridge'],          order:0 },
-  { id:'tool_subs',      name:'Substance Painter', folder_key:'subs',      color:'#a78bfa', exe_path:'', tier:'official', capabilities:['open_file'],                                 order:1 },
-  { id:'tool_unity',     name:'Unity',             folder_key:'unity',     color:'#47c5ff', exe_path:'', tier:'official', capabilities:['open_file'],                                 order:2 },
-  { id:'tool_fbx',       name:'FBX Exports',       folder_key:'fbx',       color:'#3ddc84', exe_path:'', tier:'official', capabilities:['fbx_versioning','open_file'],                 order:3 },
-  { id:'tool_pictures',  name:'Pictures',          folder_key:'pictures',  color:'#fb923c', exe_path:'', tier:'official', capabilities:[],                                            order:4 },
-  { id:'tool_promo',     name:'Promo Art',         folder_key:'promo art', color:'#f472b6', exe_path:'', tier:'official', capabilities:[],                                            order:5 },
-  { id:'tool_resonite',  name:'Resonite',          folder_key:'resonite',  color:'#fbbf24', exe_path:'', tier:'official', capabilities:[],                                            order:6 },
-  { id:'tool_export',    name:'Export',            folder_key:'export',    color:'#e8ff47', exe_path:'', tier:'official', capabilities:[],                                            order:7 },
+  { id:'tool_blender',   name:'Blender',           folder_key:'blender',   color:'#ff6b35', exe_path:'', tier:'official', capabilities:['create_file','open_file','bridge'], file_types:['blend'],                                     order:0 },
+  { id:'tool_subs',      name:'Substance Painter', folder_key:'subs',      color:'#a78bfa', exe_path:'', tier:'official', capabilities:['open_file'], file_types:['spp','psd'],           order:1 },
+  { id:'tool_unity',     name:'Unity',             folder_key:'unity',     color:'#47c5ff', exe_path:'', tier:'official', capabilities:['open_file'], file_types:['mat','unity','prefab','cs','meta'], order:2 },
+  { id:'tool_fbx',       name:'FBX Exports',       folder_key:'fbx',       color:'#3ddc84', exe_path:'', tier:'official', capabilities:['fbx_versioning','open_file'], file_types:['fbx','obj'], order:3 },
+  { id:'tool_pictures',  name:'Pictures',          folder_key:'pictures',  color:'#fb923c', exe_path:'', tier:'official', capabilities:[], file_types:['png','jpg','jpeg','tga','exr','gif','webp','hdr','bmp','svg','tif','tiff','avif'], order:4 },
+  { id:'tool_promo',     name:'Promo Art',         folder_key:'promo art', color:'#f472b6', exe_path:'', tier:'official', capabilities:[], file_types:[],                                  order:5 },
+  { id:'tool_resonite',  name:'Resonite',          folder_key:'resonite',  color:'#fbbf24', exe_path:'', tier:'official', capabilities:[], file_types:['glb','gltf','vrm'],             order:6 },
+  { id:'tool_export',    name:'Export',            folder_key:'export',    color:'#e8ff47', exe_path:'', tier:'official', capabilities:[], file_types:['zip','rar','7z'],               order:7 },
 ];
 
 export const DEFAULT_PIPELINE_STAGES = [

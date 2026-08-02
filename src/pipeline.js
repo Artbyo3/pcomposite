@@ -20,6 +20,7 @@ function renderPipeline() {
     const nextStage = getStageLabel(stages[i]);
     return `<div class="pstep" role="tab" aria-selected="${active}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setPipe(${i})}if(event.key==='ArrowRight'){const s=this.parentElement;const tabs=[...s.querySelectorAll('[role=tab]')];const idx=tabs.indexOf(this);if(idx<tabs.length-1)tabs[idx+1].focus()}if(event.key==='ArrowLeft'){const s=this.parentElement;const tabs=[...s.querySelectorAll('[role=tab]')];const idx=tabs.indexOf(this);if(idx>0)tabs[idx-1].focus()}">
       <div class="pnode ${done ? 'done' : active ? 'active' : 'inactive'}" onclick="setPipe(${i})" data-tip="${tip}" data-stage-label="${nextStage}">
+        ${s.color ? `<span class="pdot" style="background:${s.color}"></span>` : ''}
         <span class="picon">${getStageIcon(s)}</span>
         <span class="plabel">${getStageLabel(s)}</span>
         ${done ? '<div class="pcheck">✓</div>' : ''}

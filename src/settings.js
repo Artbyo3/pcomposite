@@ -3,7 +3,7 @@ import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { escapeHTML, isStreamerMode, sanitizePath, generateId } from './helpers.js';
 import { globalSettings, projects } from './state.js';
 import { loadSettings as loadJSONSettings, saveSettings, migrateOldBases, ensureVaultBasesDir } from './data.js';
-import { showToast } from './ui.js';
+import { showToast, showConfirm } from './ui.js';
 import { DEFAULT_TOOLS, DEFAULT_PIPELINE_STAGES } from './constants.js';
 
 async function loadSettings() {
@@ -25,6 +25,18 @@ async function loadSettings() {
     if (!globalSettings.tools || !globalSettings.tools.length) {
       globalSettings.tools = DEFAULT_TOOLS;
       needsSave = true;
+    } else {
+      // Seed file_types on existing tools that don't have any yet
+      let toolsChanged = false;
+      globalSettings.tools = globalSettings.tools.map(t => {
+        const def = DEFAULT_TOOLS.find(d => d.id === t.id || d.name === t.name);
+        if (def && def.file_types && !(Array.isArray(t.file_types) && t.file_types.length)) {
+          toolsChanged = true;
+          return { ...t, file_types: [...def.file_types] };
+        }
+        return t;
+      });
+      if (toolsChanged) needsSave = true;
     }
     if (!globalSettings.pipelineStages || !globalSettings.pipelineStages.length) {
       globalSettings.pipelineStages = DEFAULT_PIPELINE_STAGES;
@@ -70,6 +82,7 @@ function renderSettings() {
       <div class="set-section-head">${names[s]}</div>
       ${renderSectionContent(s)}
     </div>`).join('');
+  initWorkflowDrag();
   setTimeout(updateNamingPreview, 50);
 }
 
@@ -181,18 +194,25 @@ function renderSectionContent(section) {
   if (section === 'workflow') {
     const tools = globalSettings.tools || [];
     const stages = globalSettings.pipelineStages || [];
-    return `<div class="set-group">
-      <div class="set-group-title">Tools <span class="wf-count">${tools.length}</span></div>
-      <div class="set-group-desc">Define the tools and folders in your pipeline. Official tools are built-in; custom tools you can add and remove freely.</div>
-      <div class="wf-search"><input id="wfToolsSearch" class="fi" placeholder="Search tools..." oninput="filterToolsList()"></div>
-      <div id="toolsListContent">${_renderToolsList(tools)}</div>
-      <div class="wf-add-area"><button class="set-btn" onclick="showToolForm()">+ ADD TOOL</button></div>
-    </div>
-    <div class="set-group">
-      <div class="set-group-title">Pipeline Stages <span class="wf-count">${stages.length}</span></div>
-      <div class="set-group-desc">Stages shown in the pipeline bar and used to generate checklists for new projects.</div>
-      <div id="stagesListContent">${_renderStagesList(stages, tools)}</div>
-      <div class="wf-add-area"><button class="set-btn" onclick="showStageForm()">+ ADD STAGE</button></div>
+    return `<div class="wf-bento">
+      <div class="set-group">
+        <div class="set-group-title">Tools <span class="wf-count">${tools.length}</span></div>
+        <div class="set-group-desc">Define the tools and folders in your pipeline. Official tools are built-in; custom tools you can add and remove freely. Drag tiles to set the order.</div>
+        <div class="wf-search"><input id="wfToolsSearch" class="fi" placeholder="Search tools..." oninput="filterToolsList()"></div>
+        <div id="toolsListContent" class="wf-tiles">
+          ${_renderToolsList(tools)}
+          <div class="wtile wtile-add" onclick="showToolForm()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showToolForm()}">+ ADD TOOL</div>
+        </div>
+        <div id="wfToolsEmpty" class="wf-empty" style="display:none">No tools match your search</div>
+      </div>
+      <div class="set-group">
+        <div class="set-group-title">Pipeline Stages <span class="wf-count">${stages.length}</span></div>
+        <div class="set-group-desc">Stages shown in the pipeline bar and used to generate checklists for new projects. Drag rows to set the order.</div>
+        <div id="stagesListContent" class="wf-stages">
+          ${_renderStagesList(stages, tools)}
+          <div class="wstage wstage-add" onclick="showStageForm()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showStageForm()}">+ ADD STAGE</div>
+        </div>
+      </div>
     </div>`;
   }
 
@@ -309,22 +329,19 @@ window.setTheme = async function(theme) {
 
 function _renderToolsList(tools) {
   if (!tools.length) return '<div class="wf-empty">No tools configured</div>';
-  return tools.map((t, i) => {
-    const sd = escapeHTML((t.name + ' ' + t.folder_key).toLowerCase());
-    return `<div class="wf-item" data-search="${sd}">
-      <div class="wf-reorder">
-        <button onclick="moveTool('${t.id}',-1)" ${i === 0 ? 'style="visibility:hidden"' : ''}>▲</button>
-        <button onclick="moveTool('${t.id}',1)" ${i === tools.length - 1 ? 'style="visibility:hidden"' : ''}>▼</button>
+  return tools.map((t) => {
+    const sd = escapeHTML((t.name + ' ' + t.folder_key + ' ' + (t.file_types || []).join(' ')).toLowerCase());
+    return `<div class="wtile" style="--fc:${t.color}" data-search="${sd}" data-id="${t.id}" draggable="true" tabindex="0" title="Drag to reorder" onkeydown="keyReorderTool(event, this)">
+      <div class="wtile-top">
+        <span class="wtile-color" style="background:${t.color}"></span>
+        <span class="wf-tier ${t.tier}">${t.tier.toUpperCase()}</span>
       </div>
-      <div class="wf-color" style="background:${t.color}"></div>
-      <div class="wf-info">
-        <div class="wf-name">${escapeHTML(t.name)}</div>
-        <div class="wf-meta">${escapeHTML(t.folder_key)}</div>
-      </div>
-      <span class="wf-tier ${t.tier}">${t.tier.toUpperCase()}</span>
-      <div class="wf-actions">
-        <button class="wf-btn" onclick="showToolForm('${t.id}')">✎</button>
-        ${t.tier !== 'official' ? `<button class="wf-btn danger" onclick="deleteTool('${t.id}')">✕</button>` : ''}
+      <div class="wtile-name">${escapeHTML(t.name)}</div>
+      <div class="wtile-meta">${escapeHTML(t.folder_key)}</div>
+      <div class="wtile-types">${(t.file_types || []).map(x => `<span>${escapeHTML(x)}</span>`).join('')}</div>
+      <div class="wtile-actions">
+        <button class="wf-btn" onclick="showToolForm('${t.id}')" title="Edit ${escapeHTML(t.name)}" aria-label="Edit ${escapeHTML(t.name)}">✎</button>
+        ${t.tier !== 'official' ? `<button class="wf-btn danger" onclick="deleteTool('${t.id}')" title="Remove ${escapeHTML(t.name)}" aria-label="Remove ${escapeHTML(t.name)}">✕</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -334,19 +351,17 @@ function _renderStagesList(stages, tools) {
   if (!stages.length) return '<div class="wf-empty">No stages configured</div>';
   return stages.map((s, i) => {
     const toolName = s.tool_id ? (tools.find(t => t.id === s.tool_id)?.name || '?') : null;
-    return `<div class="wf-item">
-      <div class="wf-reorder">
-        <button onclick="moveStage(${i},-1)" ${i === 0 ? 'style="visibility:hidden"' : ''}>▲</button>
-        <button onclick="moveStage(${i},1)" ${i === stages.length - 1 ? 'style="visibility:hidden"' : ''}>▼</button>
+    const num = String(i + 1).padStart(2, '0');
+    return `<div class="wstage" data-idx="${i}" draggable="true" tabindex="0" title="Drag to reorder" onkeydown="keyReorderStage(event, this)">
+      <span class="wstage-pos">${num}</span>
+      <span class="wstage-color" style="background:${s.color}"></span>
+      <div class="wstage-info">
+        <div class="wstage-name">${escapeHTML(s.name)}</div>
+        ${toolName ? `<span class="wf-tag">→ ${escapeHTML(toolName)}</span>` : ''}
       </div>
-      <div class="wf-color" style="background:${s.color}"></div>
-      <div class="wf-info">
-        <div class="wf-name">${escapeHTML(s.name)}</div>
-      </div>
-      ${toolName ? `<span class="wf-tag">→ ${escapeHTML(toolName)}</span>` : ''}
       <div class="wf-actions">
-        <button class="wf-btn" onclick="showStageForm(${i})">✎</button>
-        <button class="wf-btn danger" onclick="deleteStage(${i})">✕</button>
+        <button class="wf-btn" onclick="showStageForm(${i})" title="Edit ${escapeHTML(s.name)}" aria-label="Edit ${escapeHTML(s.name)}">✎</button>
+        <button class="wf-btn danger" onclick="deleteStage(${i})" title="Remove ${escapeHTML(s.name)}" aria-label="Remove ${escapeHTML(s.name)}">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -383,6 +398,11 @@ window.showToolForm = function(toolId) {
           <label class="fl">Folder Key</label>
           <input id="wf_toolFolder" class="fi" placeholder="e.g. maya" value="${escapeHTML(tool?.folder_key || '')}" ${isOfficial ? 'readonly' : ''}>
           <div class="wf-meta" style="margin-top:3px">Folder name created inside each project</div>
+        </div>
+        <div class="fg">
+          <label class="fl">File Types</label>
+          <input id="wf_toolTypes" class="fi" placeholder="e.g. blend, fbx, zip" value="${escapeHTML((tool?.file_types || []).join(', '))}">
+          <div class="wf-meta" style="margin-top:3px">Comma-separated extensions. Dropped files with these extensions auto-sort into this tool's folder. Anything else falls back to the Export folder.</div>
         </div>
         <div class="fg">
           <label class="fl">Color</label>
@@ -427,6 +447,8 @@ window.saveToolFromForm = async function() {
   const color = document.getElementById('wf_toolColor')?.value;
   const exePath = document.getElementById('wf_toolExe')?.value.trim() || '';
   const aumid = document.getElementById('wf_toolAumid')?.value.trim() || '';
+  const fileTypes = (document.getElementById('wf_toolTypes')?.value || '')
+    .split(/[, ]+/).map(s => s.trim().toLowerCase().replace(/^\.+/, '')).filter(Boolean);
 
   if (!name) { showToast('Tool name is required', 'var(--orange)'); return; }
   if (!folderKey) { showToast('Folder key is required', 'var(--orange)'); return; }
@@ -442,10 +464,10 @@ window.saveToolFromForm = async function() {
 
   if (_editingToolId) {
     const idx = tools.findIndex(t => t.id === _editingToolId);
-    if (idx >= 0) tools[idx] = { ...tools[idx], name, folder_key: folderKey, color, exe_path: exePath, aumid };
+    if (idx >= 0) tools[idx] = { ...tools[idx], name, folder_key: folderKey, color, exe_path: exePath, aumid, file_types: fileTypes };
   } else {
     const maxOrder = tools.reduce((m, t) => Math.max(m, t.order), -1);
-    tools.push({ id:'tool_' + generateId(), name, folder_key: folderKey, color, exe_path: exePath, aumid, tier:'custom', capabilities:[], order: maxOrder + 1 });
+    tools.push({ id:'tool_' + generateId(), name, folder_key: folderKey, color, exe_path: exePath, aumid, tier:'custom', capabilities:[], file_types: fileTypes, order: maxOrder + 1 });
   }
 
   globalSettings.tools = tools;
@@ -538,6 +560,13 @@ window.deleteTool = async function(toolId) {
   if (!tool) return;
   if (tool.tier === 'official') { showToast('Cannot remove an official tool', 'var(--orange)'); return; }
 
+  const linked = (globalSettings.pipelineStages || []).filter(s => s.tool_id === toolId).length;
+  const msg = linked
+    ? `Remove "<b>${escapeHTML(tool.name)}</b>" from the pipeline? ${linked} stage${linked > 1 ? 's' : ''} using it will be unlinked.`
+    : `Remove "<b>${escapeHTML(tool.name)}</b>" from the pipeline? This cannot be undone.`;
+  const confirmed = await showConfirm('Remove Tool', msg);
+  if (!confirmed) return;
+
   const stages = (globalSettings.pipelineStages || []).map(s =>
     s.tool_id === toolId ? { ...s, tool_id: null } : s
   );
@@ -551,17 +580,153 @@ window.deleteTool = async function(toolId) {
   } catch (e) { showToast('Could not remove tool', 'var(--red)'); }
 };
 
-window.moveTool = async function(toolId, direction) {
+// ── REORDER: DRAG & DROP + KEYBOARD ──
+
+let _dragType = null;
+let _dragId = null;
+let _dragIdx = null;
+
+function initWorkflowDrag() {
+  const toolsBox = document.getElementById('toolsListContent');
+  if (toolsBox) {
+    toolsBox.querySelectorAll('.wtile[draggable="true"]').forEach(tile => {
+      tile.addEventListener('dragstart', onToolDragStart);
+      tile.addEventListener('dragover', onToolDragOver);
+      tile.addEventListener('dragleave', onDragLeave);
+      tile.addEventListener('drop', onToolDrop);
+      tile.addEventListener('dragend', onDragEnd);
+    });
+  }
+  const stagesBox = document.getElementById('stagesListContent');
+  if (stagesBox) {
+    stagesBox.querySelectorAll('.wstage[draggable="true"]').forEach(row => {
+      row.addEventListener('dragstart', onStageDragStart);
+      row.addEventListener('dragover', onStageDragOver);
+      row.addEventListener('dragleave', onDragLeave);
+      row.addEventListener('drop', onStageDrop);
+      row.addEventListener('dragend', onDragEnd);
+    });
+  }
+}
+
+function onToolDragStart(e) {
+  _dragType = 'tool'; _dragId = e.currentTarget.dataset.id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', _dragId);
+  e.currentTarget.classList.add('dragging');
+}
+
+function onStageDragStart(e) {
+  _dragType = 'stage'; _dragIdx = parseInt(e.currentTarget.dataset.idx, 10);
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(_dragIdx));
+  e.currentTarget.classList.add('dragging');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drop', 'drop-top', 'drop-bottom');
+}
+
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging', 'drop', 'drop-top', 'drop-bottom');
+  _dragType = null; _dragId = null; _dragIdx = null;
+}
+
+function onToolDragOver(e) {
+  if (_dragType !== 'tool') return;
+  e.preventDefault();
+  e.currentTarget.classList.add('drop');
+}
+
+function onStageDragOver(e) {
+  if (_dragType !== 'stage') return;
+  e.preventDefault();
+  const t = e.currentTarget;
+  t.classList.remove('drop-top', 'drop-bottom');
+  const rect = t.getBoundingClientRect();
+  t.classList.add((e.clientY - rect.top) < rect.height / 2 ? 'drop-top' : 'drop-bottom');
+}
+
+function onToolDrop(e) {
+  if (_dragType !== 'tool') return;
+  e.preventDefault();
+  const t = e.currentTarget;
+  t.classList.remove('drop');
+  if (t.dataset.id === _dragId) return;
   const tools = [...(globalSettings.tools || [])];
-  const idx = tools.findIndex(t => t.id === toolId);
-  if (idx < 0) return;
-  const newIdx = idx + direction;
-  if (newIdx < 0 || newIdx >= tools.length) return;
+  const from = tools.findIndex(x => x.id === _dragId);
+  const to = tools.findIndex(x => x.id === t.dataset.id);
+  if (from < 0 || to < 0) return;
+  const [moved] = tools.splice(from, 1);
+  tools.splice(tools.findIndex(x => x.id === t.dataset.id) + 1, 0, moved);
+  tools.forEach((x, i) => x.order = i);
+  globalSettings.tools = tools;
+  saveToolOrder();
+}
+
+function onStageDrop(e) {
+  if (_dragType !== 'stage') return;
+  e.preventDefault();
+  const t = e.currentTarget;
+  const after = t.classList.contains('drop-bottom');
+  t.classList.remove('drop-top', 'drop-bottom');
+  const stages = [...(globalSettings.pipelineStages || [])];
+  const from = _dragIdx;
+  const to = parseInt(t.dataset.idx, 10);
+  if (from < 0 || to < 0 || from === to) return;
+  const [moved] = stages.splice(from, 1);
+  let insertAt = to > from ? to - 1 : to;
+  if (after) insertAt += 1;
+  stages.splice(insertAt, 0, moved);
+  stages.forEach((s, i) => s.order = i);
+  globalSettings.pipelineStages = stages;
+  saveStageOrder();
+}
+
+async function saveToolOrder() {
+  try { await saveSettings(globalSettings); renderSettings(); showToast('Tool order updated', 'var(--green)'); }
+  catch (e) { showToast('Could not reorder tools', 'var(--red)'); }
+}
+
+async function saveStageOrder() {
+  try { await saveSettings(globalSettings); renderSettings(); showToast('Stage order updated', 'var(--green)'); }
+  catch (e) { showToast('Could not reorder stages', 'var(--red)'); }
+}
+
+window.keyReorderTool = async function(e, tile) {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  const tools = [...(globalSettings.tools || [])];
+  const idx = tools.findIndex(x => x.id === tile.dataset.id);
+  const newIdx = idx + (e.key === 'ArrowUp' ? -1 : 1);
+  if (idx < 0 || newIdx < 0 || newIdx >= tools.length) return;
   [tools[idx], tools[newIdx]] = [tools[newIdx], tools[idx]];
   tools.forEach((t, i) => t.order = i);
   globalSettings.tools = tools;
-  try { await saveSettings(globalSettings); renderSettings(); }
-  catch (e) { showToast('Could not reorder tools', 'var(--red)'); }
+  try {
+    await saveSettings(globalSettings);
+    renderSettings();
+    const next = document.querySelector(`.wtile[data-id="${tile.dataset.id}"]`);
+    if (next) next.focus();
+    showToast('Tool order updated', 'var(--green)');
+  } catch (err) { showToast('Could not reorder tools', 'var(--red)'); }
+};
+
+window.keyReorderStage = async function(e, row) {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  const stages = [...(globalSettings.pipelineStages || [])];
+  const idx = parseInt(row.dataset.idx, 10);
+  const newIdx = idx + (e.key === 'ArrowUp' ? -1 : 1);
+  if (idx < 0 || newIdx < 0 || newIdx >= stages.length) return;
+  [stages[idx], stages[newIdx]] = [stages[newIdx], stages[idx]];
+  stages.forEach((s, i) => s.order = i);
+  globalSettings.pipelineStages = stages;
+  try {
+    await saveSettings(globalSettings);
+    renderSettings();
+    showToast('Stage order updated', 'var(--green)');
+  } catch (err) { showToast('Could not reorder stages', 'var(--red)'); }
 };
 
 // ── STAGE CRUD ──
@@ -653,27 +818,26 @@ window.deleteStage = async function(idx) {
   const stages = globalSettings.pipelineStages || [];
   if (idx < 0 || idx >= stages.length) return;
   const name = stages[idx].name;
+  const confirmed = await showConfirm(
+    'Remove Stage',
+    `Remove "<b>${escapeHTML(name)}</b>" from the pipeline? This cannot be undone.`
+  );
+  if (!confirmed) return;
   globalSettings.pipelineStages = stages.filter((_, i) => i !== idx);
   try { await saveSettings(globalSettings); renderSettings(); showToast('"' + name + '" removed', 'var(--green)'); }
   catch (e) { showToast('Could not remove stage', 'var(--red)'); }
 };
 
-window.moveStage = async function(idx, direction) {
-  const stages = [...(globalSettings.pipelineStages || [])];
-  const newIdx = idx + direction;
-  if (newIdx < 0 || newIdx >= stages.length) return;
-  [stages[idx], stages[newIdx]] = [stages[newIdx], stages[idx]];
-  stages.forEach((s, i) => s.order = i);
-  globalSettings.pipelineStages = stages;
-  try { await saveSettings(globalSettings); renderSettings(); }
-  catch (e) { showToast('Could not reorder stages', 'var(--red)'); }
-};
-
 window.filterToolsList = function() {
   const q = document.getElementById('wfToolsSearch')?.value.toLowerCase() || '';
-  document.querySelectorAll('#toolsListContent .wf-item').forEach(el => {
-    el.style.display = (!q || (el.dataset.search || '').includes(q)) ? '' : 'none';
+  let shown = 0;
+  document.querySelectorAll('#toolsListContent .wtile[data-search]').forEach(el => {
+    const match = !q || (el.dataset.search || '').includes(q);
+    el.style.display = match ? '' : 'none';
+    if (match) shown++;
   });
+  const empty = document.getElementById('wfToolsEmpty');
+  if (empty) empty.style.display = shown === 0 && q ? '' : 'none';
 };
 
 // ── FORM HELPERS ──

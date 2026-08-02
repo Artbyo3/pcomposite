@@ -5,10 +5,10 @@ import './sidebar.css';
 import './pipeline.css';
 import './project-header.css';
 import './files.css';
+import './components.css';
 import './gallery.css';
 import './panel.css';
 import './statusbar.css';
-import './components.css';
 import './modal.css';
 import './settings.css';
 import './exports.css';
@@ -16,6 +16,7 @@ import './bases.css';
 
 // ── DATA ──
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { initDataStore } from './data.js';
 
 import { projects, globalSettings } from './state.js';
@@ -24,7 +25,7 @@ import { loadSettings, openSettings, closeSettings, pickSettingPath } from './se
 import { renderPipeline, setPipe } from './pipeline.js';
 import { refreshFolders, renderFolders, drillFolder } from './folders.js';
 import { saveSessionNote, renderChecklist, toggleCk, logAction, renderLog } from './checklist.js';
-import { loadProjects, renderProjects, selectProject, saveActiveProject } from './projects.js';
+import { loadProjects, renderProjects, selectProject, saveActiveProject, resyncActiveProject } from './projects.js';
 import { renderFileList, setFileView as setFileViewFn, goBackFolders,
   openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile,
   showCtx, removeCtx } from './files.js';
@@ -101,6 +102,19 @@ document.addEventListener('keydown', e => {
 document.addEventListener('click', removeCtx);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { removeCtx(); closeModal(); } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeGallery(); } });
+
+// ── RESYNC ON FOCUS ──
+// Mirror external changes (files added/removed in Explorer while the app is open).
+// Uses the Tauri-native window focus event (reliable even with a custom titlebar),
+// with DOM focus + visibility as fallbacks.
+let _resyncTimer = null;
+function _resyncSoon() {
+  clearTimeout(_resyncTimer);
+  _resyncTimer = setTimeout(() => resyncActiveProject().catch(() => {}), 250);
+}
+getCurrentWindow().onFocusChanged(({ payload: focused }) => { if (focused) _resyncSoon(); });
+window.addEventListener('focus', _resyncSoon);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') _resyncSoon(); });
 
 // ── WINDOW EXPORTS ──
 Object.assign(window, {

@@ -323,7 +323,8 @@ async function handleDroppedFiles(paths) {
 
       const fileInfo  = await stat(destPath);
       const sizeBytes = fileInfo.size;
-      const app = { blender:'Blender', subs:'Substance Painter', unity:'Unity', pictures:'Viewer' }[destFolder] || 'Explorer';
+      const tool = (globalSettings.tools || []).find(t => t.folder_key === destFolder);
+      const app = tool ? tool.name : 'Explorer';
       const now = new Date().toLocaleDateString();
 
       const existingIdx = data.files.findIndex(f => f.name === baseNm && f.folder === destFolder);
@@ -361,18 +362,24 @@ async function collectFilesRecursive(dirPath) {
   return files;
 }
 
-function _fk(name) {
-  const t = (globalSettings.tools || []).find(x => x.name === name);
-  return t ? t.folder_key : '';
-}
 function destFolderForExt(lowerExt) {
-  if (lowerExt === '.blend' || /^\.blend\d+$/.test(lowerExt)) return _fk('Blender') || 'blender';
-  if (lowerExt === '.spp') return _fk('Substance Painter') || 'subs';
-  if (['.png','.jpg','.jpeg','.tga','.exr'].includes(lowerExt)) return _fk('Pictures') || 'pictures';
-  if (['.fbx','.obj'].includes(lowerExt)) return _fk('FBX Exports') || 'fbx';
-  if (['.mat','.unity','.prefab','.cs','.meta'].includes(lowerExt)) return _fk('Unity') || 'unity';
-  const fallback = (globalSettings.tools || []).find(t => (t.capabilities || []).includes('open_file'));
-  return fallback ? fallback.folder_key : 'export';
+  const tools = globalSettings.tools || [];
+  const findFolder = (pred, fallbackKey) => {
+    const t = tools.find(pred);
+    return t ? t.folder_key : fallbackKey;
+  };
+
+  // 1. Declared file types win (data-driven, user-configurable per tool)
+  for (const t of tools) {
+    const types = (t.file_types || []).map(x => '.' + x.toLowerCase());
+    if (types.includes(lowerExt)) return t.folder_key;
+  }
+
+  // 2. Blender backup files (.blend1, .blend2, ...) always go to the Blender folder
+  if (/^\.blend\d+$/.test(lowerExt)) return findFolder(t => t.folder_key === 'blender' || t.name === 'Blender', 'blender');
+
+  // 3. Catch-all: packaging/export folder, never the first open_file tool
+  return findFolder(t => t.folder_key === 'export' || t.name === 'Export', 'export');
 }
 
 export { showToast, showConfirm, showPrompt, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop }

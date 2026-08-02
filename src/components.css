@@ -38,7 +38,7 @@ button:focus-visible,
 .ov {
   position: fixed; inset: 0; z-index: 200;
   display: none;
-  animation: fadeUp .2s ease;
+  animation: fadeUp .2s ease both;
 }
 .ov.open { display: flex; }
 
@@ -63,9 +63,9 @@ button:focus-visible,
 
 /* ── FULL-SCREEN PANEL HEADER ── */
 .fs-hd {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 12px; row-gap: 8px;
   padding: 12px 20px; border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  flex-shrink: 0; flex-wrap: wrap;
 }
 .fs-hd-brand {
   font-family: 'Space Mono', monospace; font-weight: 700;
