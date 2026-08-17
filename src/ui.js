@@ -173,7 +173,7 @@ async function createProject() {
 // ── TAB SWITCHING ──
 function setVTab(el, tab) {
   if (el) { document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active')); el.classList.add('active'); }
-  document.getElementById('vFolders').style.display   = tab === 'folders'   ? 'block' : 'none';
+  document.getElementById('vFolders').style.display   = tab === 'folders'   ? 'flex' : 'none';
   document.getElementById('vFiles').style.display     = tab === 'files'     ? 'block' : 'none';
   document.getElementById('vChecklist').style.display = tab === 'checklist' ? 'block' : 'none';
   if (tab === 'files')     renderFileList(currentFolder);

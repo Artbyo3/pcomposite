@@ -35,22 +35,33 @@ function renderFileList(filterKey) {
         <span style="color:var(--text3);font-size:10px;margin-left:4px">— ${files.length} item${files.length !== 1 ? 's' : ''}</span>
       </div>
       <div class="file-toolbar-right">
-        ${hasFbxVer ? '<input id="fileFilter" class="file-filter-input" placeholder="filter files..." oninput="filterFileList(this.value)">' : ''}
+        ${hasFbxVer ? '<input id="fileFilter" class="file-filter-input" placeholder="filter..." oninput="filterFileList(this.value)">' : ''}
         ${hasCreate ? `<button class="btn-create" style="background:${folder?.color || 'var(--accent)'}" onclick="createFile('${filterKey}')" title="Create a new file">+ New</button>` : ''}
+        ${!hasFbxVer ? `
         <div class="view-toggle">
           <button class="vt-btn ${fileView === 'list' ? 'on' : ''}" onclick="setFileView('list')" title="List view">≡</button>
           <button class="vt-btn ${fileView === 'grid' ? 'on' : ''}" onclick="setFileView('grid')" title="Grid view">⊞</button>
         </div>
+        ` : ''}
       </div>
     </div>
   `;
 
   if (!files.length) {
-    document.getElementById('fileListContent').innerHTML = toolbar + (exportSection || `<div class="file-empty">
+    const emptyHtml = `<div class="file-empty">
         <div class="file-empty-icon">${folder?.icon || ''}</div>
         <div class="file-empty-text">This folder is empty</div>
         <div class="file-empty-sub">Drop files here — PCOMPOSITE sorts them automatically</div>
-      </div>`);
+      </div>`;
+    document.getElementById('fileListContent').innerHTML = toolbar + emptyHtml + (exportSection || '');
+    loadExportCovers();
+    return;
+  }
+
+  // Versioned export folders (FBX): the exports ledger IS the view — one continuous
+  // surface, no duplicated file table underneath.
+  if (hasFbxVer) {
+    document.getElementById('fileListContent').innerHTML = toolbar + exportSection;
     loadExportCovers();
     return;
   }
@@ -77,7 +88,7 @@ function renderFileList(filterKey) {
   }
 
   const rows = files.map((f, fi) => `
-    <div class="frow ${cls}" oncontextmenu="showCtx(event,${indices[fi]})" onclick="this.classList.toggle('sel')" tabindex="0" role="option" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFile(${indices[fi]})}if(event.key==='Delete'){event.preventDefault();deleteFile(${indices[fi]})}">
+    <div class="frow ${cls}" oncontextmenu="showCtx(event,${indices[fi]})" onmousedown="fileDragStart(event,${indices[fi]})" onclick="if(!window._fileDragSuppressClick){this.classList.toggle('sel')}" tabindex="0" role="option" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openFile(${indices[fi]})}if(event.key==='Delete'){event.preventDefault();deleteFile(${indices[fi]})}">
       <span class="fr-ico">${isViewableImage(f.ext) ? `<img class="fr-thumb" data-idx="${indices[fi]}" src="" style="width:28px;height:28px;object-fit:cover;border-radius:3px;vertical-align:middle;">` : f.icon}</span>
       <div class="fr-nm-wrap"><span class="fr-nm">${escapeHTML(f.name)}</span>${fileToExport[f.name] ? '<span class="fr-tag">' + escapeHTML(fileToExport[f.name]) + '</span>' : ''}${f.subfolder ? '<span class="fr-tag" style="background:var(--border2);color:var(--text2)">' + escapeHTML(f.subfolder) + '</span>' : ''}</div>
       <div><span class="fr-ext" style="background:${f.ec}18;color:${f.ec}">${f.ext}</span></div>
@@ -243,6 +254,66 @@ async function openFile(idx) {
   }
 }
 
+async function _filePath(f) {
+  if (!globalSettings.root_path) return '';
+  const p = projects.find(x => x.active);
+  if (!p) return '';
+  return f.subfolder
+    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+}
+
+let _fileDrag = null;
+let _fileDragSuppressClick = false;
+let _fileDragCleanup = null;
+
+async function _doFileDrag(idx) {
+  const f = ALL_FILES[idx];
+  if (!f) return;
+  const path = await _filePath(f);
+  if (!path) { showToast('No root path set', 'var(--red)'); return; }
+  try {
+    await invoke('drag_file', { path, title: f.name, subtitle: 'Drop into ' + (f.app || 'default app') });
+  } catch (err) {
+    showToast('Drag cancelled', 'var(--red)');
+  }
+}
+
+window.fileDragStart = function(e, idx) {
+  if (e.button !== 0) return;
+  const state = { idx, startX: e.screenX, startY: e.screenY, triggered: false };
+  _fileDrag = state;
+
+  const onMove = (ev) => {
+    if (_fileDrag !== state) { onUp(); return; }
+    if (_fileDrag.triggered) return;
+    const dx = ev.screenX - _fileDrag.startX;
+    const dy = ev.screenY - _fileDrag.startY;
+    if (dx * dx + dy * dy < 100) return;
+    _fileDrag.triggered = true;
+    _fileDragSuppressClick = true;
+    setTimeout(() => { _fileDragSuppressClick = false; }, 250);
+    onUp();
+    _doFileDrag(idx);
+  };
+
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    _fileDrag = null;
+    _fileDragCleanup = null;
+  };
+
+  _fileDragCleanup = onUp;
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+};
+
+window.fileDragEnd = function() {
+  if (_fileDragCleanup) { _fileDragCleanup(); }
+  _fileDrag = null;
+};
+
 let _ivUrl = '';
 async function openImageViewer(path, filename) {
   const viewer = document.getElementById('imageViewer');
@@ -378,8 +449,21 @@ function showCtx(e, idx) {
 function removeCtx() { if (ctxEl) { ctxEl.remove(); setCtxEl(null); } }
 
 window.filterFileList = function(val) {
-  const rows = document.querySelectorAll('#fileRows .frow');
   const q = val.toLowerCase().trim();
+  const groups = document.querySelectorAll('.exp-target');
+  if (groups.length) {
+    let visible = 0;
+    for (const g of groups) {
+      const txt = g.textContent.toLowerCase();
+      const match = !q || txt.includes(q);
+      g.style.display = match ? '' : 'none';
+      if (match) visible++;
+    }
+    const cnt = document.querySelector('.file-breadcrumb span:last-child');
+    if (cnt) cnt.textContent = '— ' + visible + ' of ' + groups.length + ' targets';
+    return;
+  }
+  const rows = document.querySelectorAll('#fileRows .frow');
   for (const row of rows) {
     const name = row.querySelector('.fr-nm')?.textContent?.toLowerCase() || '';
     row.style.display = !q || name.includes(q) ? '' : 'none';

@@ -160,10 +160,10 @@ async function selectProject(i) {
 // Returns the set of JSON-only keys that no longer exist on disk (e.g. deleted in Explorer).
 async function applyFileSync(projectDir, diskFiles, jsonFiles) {
   const diskMap = new Map();
-  for (const f of diskFiles) diskMap.set(f.folder + '/' + f.name, f);
+  for (const f of diskFiles) diskMap.set(f.folder + '/' + (f.subfolder ? f.subfolder + '/' : '') + f.name, f);
 
   for (const f of jsonFiles) {
-    const diskF = diskMap.get(f.folder + '/' + f.name);
+    const diskF = diskMap.get(f.folder + '/' + (f.subfolder ? f.subfolder + '/' : '') + f.name);
     if (diskF) {
       diskF.app = f.app || diskF.app;
       diskF.created_at = f.created_at || diskF.created_at;
@@ -171,13 +171,13 @@ async function applyFileSync(projectDir, diskFiles, jsonFiles) {
   }
 
   const missingKeys = new Set(
-    jsonFiles.filter(f => !diskMap.has(f.folder + '/' + f.name)).map(f => f.folder + '/' + f.name)
+    jsonFiles.filter(f => !diskMap.has(f.folder + '/' + (f.subfolder ? f.subfolder + '/' : '') + f.name)).map(f => f.folder + '/' + (f.subfolder ? f.subfolder + '/' : '') + f.name)
   );
 
   ALL_FILES.length = 0;
   for (const f of diskMap.values()) {
     const meta = getFolderMeta(f.folder);
-    ALL_FILES.push({ name: f.name, folder: f.folder, ext: f.ext, size: formatBytes(f.size_bytes), sizeBytes: f.size_bytes, date: f.created_at, app: f.app, icon: meta.icon, ec: meta.color, _path: projectDir ? projectDir + '/' + f.folder + '/' + f.name : '' });
+    ALL_FILES.push({ name: f.name, folder: f.folder, subfolder: f.subfolder || '', ext: f.ext, size: formatBytes(f.size_bytes), sizeBytes: f.size_bytes, date: f.created_at, app: f.app, icon: meta.icon, ec: meta.color, _path: projectDir ? projectDir + '/' + f.folder + '/' + (f.subfolder ? f.subfolder + '/' : '') + f.name : '' });
   }
   return missingKeys;
 }

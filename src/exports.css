@@ -11,7 +11,6 @@
   font-size:9px; font-weight:700; font-family:'Space Mono',monospace;
   letter-spacing:2px; color:var(--text2); flex:1;
 }
-.exp-header-count { font-size:10px; font-family:'Space Mono',monospace; color:var(--text3); }
 .exp-header-btn {
   display:inline-flex; align-items:center; height:28px; padding:0 12px;
   background:var(--accent); color:#000; border:none; border-radius:6px;
@@ -24,45 +23,70 @@
 }
 .exp-header-btn.sec:hover { background:var(--bg5); color:var(--text); border-color:var(--border2); }
 
-/* Jump strip for many targets */
-.exp-jump {
-  display:flex; flex-wrap:wrap; gap:4px; padding:0 0 10px;
+/* Release cards — one card per target/base, stacked with breathing room */
+.exp-table {
+  display:flex; flex-direction:column; gap:10px;
+  margin-bottom:4px;
 }
-.exp-jump-item {
-  font-size:10px; font-family:'Space Mono',monospace; font-weight:600;
-  padding:3px 8px; border-radius:4px;
-  background:var(--bg); border:1px solid var(--border);
-  color:var(--text3); cursor:pointer;
-  transition:all .12s; letter-spacing:.5px;
-}
-.exp-jump-item:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
-/* Per-target card */
+/* Same card DNA as .pcard: gradient surface, hairline bevel, gradient edge ring */
 .exp-target {
-  display:flex; background:var(--bg2); border:1px solid var(--border);
-  border-radius:10px; overflow:hidden; margin-bottom:10px;
-  transition:border-color .2s, box-shadow .25s;
+  position:relative; isolation:isolate;
+  border-radius:10px; overflow:hidden;
+  background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.04);
+  transition:transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s;
+}
+.exp-target::before {
+  content:''; position:absolute; inset:0; border-radius:10px; padding:1px;
+  background:linear-gradient(160deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,.02) 35%,transparent 65%);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  pointer-events:none; z-index:1;
 }
 .exp-target:hover {
-  border-color:var(--border2);
-  box-shadow:0 4px 20px rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.08);
+  transform:translateY(-1px);
+  box-shadow:0 1px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.04),
+             0 4px 16px rgba(0,0,0,.25);
+}
+.exp-target:hover::before {
+  background:linear-gradient(160deg,rgba(255,255,255,.12) 0%,rgba(255,255,255,.03) 35%,transparent 65%);
+}
+/* The release that is CURRENT gets a quiet green status ring */
+.exp-target:has(.exp-target-state.on) {
+  box-shadow:0 1px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.04),
+             inset 0 0 0 1px color-mix(in srgb, var(--green) 25%, transparent);
+}
+.exp-target:has(.exp-target-state.on)::before {
+  background:linear-gradient(160deg,color-mix(in srgb, var(--green) 14%, rgba(255,255,255,.06)) 0%,transparent 55%);
 }
 
-/* Cover avatar — inline within header */
+/* Card header — the collapse toggle row */
+.exp-group-head {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; cursor:pointer; user-select:none;
+  transition:background .12s;
+}
+.exp-group-head:hover { background:rgba(255,255,255,.04); }
+.exp-group-head .exp-act.danger {
+  opacity:.45; transition:opacity .12s, color .1s, background .1s;
+}
+.exp-group-head:hover .exp-act.danger,
+.exp-group-head:focus-within .exp-act.danger { opacity:1; }
+.exp-group-head:focus-visible { outline:2px solid var(--accent); outline-offset:-1px; border-radius:10px; }
+
+/* Cover — the scan anchor, big enough to recognize at a glance */
 .exp-cover-img {
-  width:28px; height:28px; border-radius:5px; flex-shrink:0;
-  background:var(--bg3);
-  overflow:hidden;
+  width:64px; height:64px; border-radius:10px; flex-shrink:0;
+  background:var(--bg4); overflow:hidden;
   display:flex; align-items:center; justify-content:center;
-  transition:background .2s, box-shadow .2s;
-  box-shadow:0 0 0 1px var(--border);
-  margin-right:4px;
+  box-shadow:0 0 0 1px var(--border), inset 0 1px 0 rgba(255,255,255,.06);
 }
 .exp-cover-img::after {
   content:attr(data-initial);
-  font-size:12px; font-weight:700; color:var(--text3);
-  font-family:'Space Mono',monospace;
-  line-height:1;
+  font-size:24px; font-weight:800; color:var(--text3);
+  font-family:'Syne',sans-serif; line-height:1; letter-spacing:-1px;
 }
 .exp-cover-img[style*="background-image"]::after,
 .exp-cover-img[style*="backgroundImage"]::after { display:none; }
@@ -72,95 +96,130 @@
   background-position:center !important;
 }
 
-/* Target body (right) */
-.exp-target-body { flex:1; min-width:0; display:flex; flex-direction:column; }
-
-/* Head row — clickable to toggle collapse */
-.exp-target-head {
-  display:flex; align-items:center; gap:8px;
-  padding:10px 14px;
-  border-bottom:1px solid var(--border);
-  user-select:none; cursor:pointer;
-  transition:background .1s;
+.exp-card-info { display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
+.exp-group-name {
+  font-size:13px; font-weight:700; color:var(--text); letter-spacing:-.2px; line-height:1.2;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.exp-target-head:hover { background:var(--bg3); }
-.exp-target-head:active { background:var(--bg4); }
-
-/* Collapse arrow */
-.exp-collapse-arrow {
-  font-size:10px; line-height:1; color:var(--text3); flex-shrink:0;
-  transition:transform .25s ease;
+.exp-card-meta {
+  display:flex; align-items:center; gap:4px;
+  flex-wrap:nowrap; min-width:0; overflow:hidden;
 }
-.exp-target.collapsed .exp-collapse-arrow { transform:rotate(-90deg); }
+.exp-vtrail-chip { flex-shrink:0; }
+.exp-vtrail-chip {
+  font-size:9px; font-family:'Space Mono',monospace; font-weight:700;
+  letter-spacing:.3px; padding:1px 5px; border-radius:3px;
+  background:var(--bg3); color:var(--text3);
+}
+.exp-vtrail-chip.cur { background:rgba(61,220,132,.14); color:var(--green); }
+.exp-vtrail-more {
+  font-size:9px; font-family:'Space Mono',monospace; font-weight:700;
+  padding:1px 5px; border-radius:3px; color:var(--text4);
+}
+.exp-meta-date {
+  font-size:9px; font-family:'Space Mono',monospace; color:var(--text3);
+  letter-spacing:.4px; margin-left:2px;
+  flex-shrink:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
 
-.exp-target-name { font-size:12px; font-weight:700; color:var(--text); flex:1; letter-spacing:-.2px; }
-.exp-target-vercount { font-size:10px; font-family:'Space Mono',monospace; color:var(--text3); }
+.exp-target-state {
+  font-size:10px; font-family:'Space Mono',monospace; font-weight:700;
+  padding:3px 8px; border-radius:5px; letter-spacing:.5px; flex-shrink:0;
+}
+.exp-target-state.on { background:rgba(61,220,132,.12); color:var(--green); }
+.exp-target-state.off { background:var(--bg); color:var(--text3); }
 
-/* Collapsible version rows wrapper - animated */
+.exp-caret {
+  width:8px; height:8px; flex-shrink:0;
+  border:solid var(--text3); border-width:0 1.5px 1.5px 0;
+  transform:rotate(45deg); transition:transform .2s ease;
+}
+.exp-target.collapsed .exp-caret { transform:rotate(-45deg); }
+
+/* Version rows wrapper — animated collapse inside the card */
 .exp-vrows {
   display:grid;
-  grid-template-rows:1fr;
-  transition:grid-template-rows .3s ease, opacity .25s ease;
+  grid-template-rows:minmax(0,1fr);
+  max-height:2200px;
+  overflow:hidden;
+  transition:grid-template-rows .3s ease, max-height .35s ease, opacity .25s ease;
   opacity:1;
 }
 .exp-target.collapsed .exp-vrows {
-  grid-template-rows:0fr;
+  grid-template-rows:minmax(0,0fr);
+  max-height:0;
   opacity:0;
 }
-.exp-vrows > * { overflow:hidden; }
+.exp-vrows > * { overflow:hidden; min-height:0; }
 
-/* Version row */
+/* Version row — aligned under the card title column */
 .exp-vrow {
-  display:flex; align-items:center; gap:8px;
-  padding:7px 14px 7px 42px;
-  border-bottom:1px solid var(--border);
+  display:grid;
+  grid-template-columns:34px 84px 96px 1fr auto;
+  align-items:center; gap:10px;
+  padding:9px 12px 9px 88px;
+  border-top:1px solid var(--border);
+  background:var(--bg);
   transition:background .1s;
-  font-size:9px;
+  font-size:11px;
 }
-.exp-vrow:last-child { border-bottom:none; }
-.exp-vrow:hover { background:var(--bg); }
+.exp-vrow:hover { background:var(--bg3); }
 .exp-vrow-current {
-  background:linear-gradient(90deg, rgba(61,220,132,.05) 0%, transparent 60%);
-  border-bottom-color:rgba(61,220,132,.12);
+  background:linear-gradient(90deg, rgba(61,220,132,.07) 0%, transparent 55%);
 }
+.exp-vrow-current:hover { background:linear-gradient(90deg, rgba(61,220,132,.1) 0%, transparent 55%); }
 
 .exp-vbadge {
+  font-size:11px; font-family:'Space Mono',monospace; font-weight:700;
+  color:var(--text); min-width:28px; text-align:center;
+  padding:2px 6px; border-radius:4px; background:var(--bg3);
+}
+.exp-vdate {
+  font-size:10px; font-family:'Space Mono',monospace; color:var(--text3);
+}
+
+/* Status is a toggle: CURRENT / SUPERSEDED / ghost (no current yet) */
+.exp-st {
   font-size:10px; font-family:'Space Mono',monospace; font-weight:700;
-  color:var(--accent); min-width:24px;
+  padding:2px 7px; border-radius:4px; letter-spacing:.6px;
+  border:1px solid transparent; cursor:pointer; width:fit-content;
+  transition:color .12s, background .12s, border-color .12s;
 }
-.exp-vdate { 
-  font-size:10px; font-family:'Space Mono',monospace; color:var(--text3); 
-  min-width:78px; flex-shrink:0;
+.exp-st:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.exp-st.is-current {
+  background:rgba(61,220,132,.14); color:var(--green); border-color:rgba(61,220,132,.25);
 }
-.exp-vcurrent {
-  font-size:10px; font-family:'Space Mono',monospace; font-weight:700;
-  padding:2px 6px; border-radius:4px;
-  background:rgba(61,220,132,.12); color:var(--green);
-  letter-spacing:.8px; flex-shrink:0;
-}
+.exp-st.is-current:hover { background:rgba(61,220,132,.24); }
+.exp-st.is-superseded { background:var(--bg3); color:var(--text3); }
+.exp-st.is-superseded:hover { color:var(--text); background:var(--bg4); }
+.exp-st.is-none { background:transparent; color:var(--text3); border:1px dashed var(--border2); }
+.exp-st.is-none:hover { color:var(--green); border-color:var(--green); background:rgba(61,220,132,.06); }
+
+.exp-vfiles { display:flex; flex-wrap:wrap; gap:4px; min-width:0; }
 .exp-vnote {
   font-size:10px; font-family:'Space Mono',monospace; color:var(--text3);
-  max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  flex-shrink:0;
+  max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   padding:1px 5px; background:var(--bg3); border-radius:3px;
 }
 
-.exp-vfiles { display:flex; flex-wrap:wrap; gap:4px; flex:1; min-width:0; }
-
+/* Actions — text buttons, always reachable */
 .exp-vactions {
-  display:flex; gap:3px; flex-shrink:0;
-  opacity:0; transition:opacity .15s;
+  display:flex; gap:4px; flex-shrink:0;
+  opacity:.7; transition:opacity .15s;
 }
-.exp-vrow:hover .exp-vactions { opacity:1; }
-
-.exp-btn {
-  background:none; border:none; cursor:pointer; color:var(--text3);
-  font-size:12px; padding:3px; line-height:1; transition:color .1s, transform .15s;
-  border-radius:4px;
+.exp-vrow:hover .exp-vactions,
+.exp-vrow:focus-within .exp-vactions { opacity:1; }
+.exp-act {
+  background:none; border:none; cursor:pointer;
+  color:var(--text3); font-family:'Space Mono',monospace;
+  font-size:9px; font-weight:700; letter-spacing:.6px;
+  padding:4px 7px; border-radius:4px;
+  transition:color .1s, background .1s;
 }
-.exp-btn:hover { color:var(--text); transform:scale(1.15); }
-.exp-btn.danger { color:var(--text3); }
-.exp-btn.danger:hover { color:var(--red); background:rgba(255,77,106,.08); }
+.exp-act:hover { color:var(--text); background:var(--bg3); }
+.exp-act.danger:hover { color:var(--red); background:rgba(255,77,106,.08); }
+.exp-act:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 
 /* File tags (shared between versions and unassigned) */
 .exp-file-tag {
@@ -168,8 +227,32 @@
   padding:2px 7px; border-radius:4px; font-weight:600;
   transition:opacity .12s, filter .12s;
   letter-spacing:.3px;
+  border:none; line-height:1.5; vertical-align:middle;
 }
 .exp-file-tag:hover { filter:brightness(1.2); opacity:1; }
+.exp-file-tag.exp-tag-open { cursor:pointer; }
+.exp-file-tag.exp-tag-open:hover { filter:brightness(1.35); }
+
+/* Unassigned dock — actionable assign pool */
+.exp-unassigned {
+  margin-top:8px; padding:12px 14px;
+  background:var(--bg2); border:1px dashed var(--border2); border-radius:10px;
+  transition:border-color .2s, background .2s;
+}
+.exp-unassigned:hover { border-color:var(--border); background:var(--bg3); }
+.exp-unassigned-title {
+  font-size:10px; font-family:'Space Mono',monospace; color:var(--text3);
+  letter-spacing:1px; margin-bottom:8px;
+}
+.exp-unassigned-list { display:flex; flex-wrap:wrap; gap:5px; }
+.exp-assign-tag {
+  cursor:pointer; border:1px solid transparent; line-height:1.6; text-align:left;
+}
+.exp-assign-tag:hover { border-color:var(--accent); }
+
+/* Empty ledger state */
+.exp-empty { padding:18px 20px; text-align:center; }
+.exp-empty-text { font-size:10px; font-family:'Space Mono',monospace; color:var(--text3); letter-spacing:1px; line-height:1.8; }
 
 /* Export dialog file pills */
 .exp-pills {
@@ -189,7 +272,7 @@
   border-color:color-mix(in srgb, var(--file-color, var(--accent)) 40%, transparent);
 }
 
-/* Export dialog mid row (version + date + current star) */
+/* Export dialog mid row (version + date + current) */
 .exp-mid-row {
   display:flex; align-items:center; gap:8px;
 }
@@ -201,33 +284,17 @@
 }
 .exp-mid-row .fi-compact:focus { border-color:var(--accent); outline:none; }
 .exp-final-label {
-  display:flex; align-items:center; justify-content:center;
-  width:32px; height:32px; flex-shrink:0;
+  display:inline-flex; align-items:center;
+  height:32px; padding:0 10px; flex-shrink:0;
   background:var(--bg3); border:1px solid var(--border); border-radius:6px;
-  cursor:pointer; color:var(--text3); font-size:14px; line-height:1;
+  cursor:pointer; color:var(--text3); font-size:9px; line-height:1;
+  font-family:'Space Mono',monospace; font-weight:700; letter-spacing:.8px;
   transition:all .15s;
 }
 .exp-final-label:hover { border-color:var(--text3); color:var(--text2); }
 .exp-final-label:has(input:checked) {
-  background:rgba(255,211,61,.1); border-color:rgba(255,211,61,.3); color:var(--yellow);
+  background:rgba(61,220,132,.1); border-color:rgba(61,220,132,.3); color:var(--green);
 }
 .exp-final-label input { display:none; }
 
-/* Unassigned section */
-.exp-unassigned {
-  margin-top:8px; padding:12px 14px;
-  background:var(--bg2); border:1px dashed var(--border2); border-radius:10px;
-  transition:border-color .2s, background .2s;
-}
-.exp-unassigned:hover { border-color:var(--border); background:var(--bg3); }
-.exp-unassigned-title {
-  font-size:10px; font-family:'Space Mono',monospace; color:var(--text3);
-  letter-spacing:1px; margin-bottom:8px;
-}
-.exp-unassigned-list { display:flex; flex-wrap:wrap; gap:5px; }
-
-/* Empty state */
-.exp-empty { padding:24px 20px 18px; text-align:center; }
-.exp-empty-text { font-size:9px; font-family:'Space Mono',monospace; color:var(--text3); letter-spacing:1px; line-height:1.8; }
-.exp-empty-sub { font-size:10px; font-family:'Space Mono',monospace; color:var(--text4); }
 .exp-modal-empty { padding:16px; text-align:center; font-size:9px; font-family:'Space Mono',monospace; color:var(--text3); border:1px dashed var(--border); border-radius:6px; background:var(--bg); }

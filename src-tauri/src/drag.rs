@@ -21,8 +21,16 @@ static DRAG_CURSOR: OnceLock<CursorHandle> = OnceLock::new();
     let temp_path = std::env::temp_dir().join("pcomposite_bridge.zip");
     std::fs::write(&temp_path, ZIP_CONTENT).map_err(|e| e.to_string())?;
 
-    let wide: Vec<u16> = temp_path
-        .to_string_lossy()
+    drag_file(
+        hwnd,
+        &temp_path.to_string_lossy(),
+        "BLENDER ADDON",
+        "Drag into Blender to install",
+    )
+}
+
+pub fn drag_file(hwnd: *mut c_void, path: &str, title: &str, subtitle: &str) -> Result<(), String> {
+    let wide: Vec<u16> = path
         .encode_utf16()
         .chain(std::iter::once(0))
         .chain(std::iter::once(0))
@@ -42,8 +50,8 @@ static DRAG_CURSOR: OnceLock<CursorHandle> = OnceLock::new();
             hwnd: hwnd as *mut c_void,
         }));
 
-        if set_drag_image(data_obj as *mut c_void).is_err() {
-            if let Ok(hbmp) = create_drag_bitmap() {
+        if set_drag_image(data_obj as *mut c_void, title, subtitle).is_err() {
+            if let Ok(hbmp) = create_drag_bitmap(title, subtitle) {
                 let hcur = CreateIconIndirect(&ICONINFO {
                     f_icon: 0, x_hotspot: CARD_W as u32 / 2, y_hotspot: 12,
                     hbm_mask: ptr::null_mut(), hbm_color: hbmp,
@@ -80,8 +88,8 @@ static DRAG_CURSOR: OnceLock<CursorHandle> = OnceLock::new();
     Ok(())
 }
 
-unsafe fn set_drag_image(data_obj: *mut c_void) -> Result<(), String> {
-    let hbmp = create_drag_bitmap()?;
+unsafe fn set_drag_image(data_obj: *mut c_void, title: &str, subtitle: &str) -> Result<(), String> {
+    let hbmp = create_drag_bitmap(title, subtitle)?;
 
     let mut helper: *mut c_void = ptr::null_mut();
     let hr = CoCreateInstance(
@@ -115,7 +123,7 @@ unsafe fn set_drag_image(data_obj: *mut c_void) -> Result<(), String> {
     Ok(())
 }
 
-unsafe fn create_drag_bitmap() -> Result<*mut c_void, String> {
+unsafe fn create_drag_bitmap(title: &str, subtitle: &str) -> Result<*mut c_void, String> {
     let hdc_screen = GetDC(ptr::null_mut());
     if hdc_screen.is_null() { return Err("GetDC failed".into()); }
 
@@ -159,16 +167,16 @@ unsafe fn create_drag_bitmap() -> Result<*mut c_void, String> {
 
     // Title
     SetBkMode(hdc, 1); // TRANSPARENT
-    let title = "BLENDER ADDON\0".encode_utf16().collect::<Vec<_>>();
+    let title_wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
     SetTextColor(hdc, TEXT_COLOR);
     let mut tr = RECT { left: 0, top: 38, right: CARD_W, bottom: 58 };
-    DrawTextW(hdc, title.as_ptr(), -1, &mut tr, DT_CENTER);
+    DrawTextW(hdc, title_wide.as_ptr(), -1, &mut tr, DT_CENTER);
 
     // Subtitle
-    let sub = "Drag into Blender to install\0".encode_utf16().collect::<Vec<_>>();
+    let sub_wide: Vec<u16> = subtitle.encode_utf16().chain(std::iter::once(0)).collect();
     SetTextColor(hdc, SUB_COLOR);
     let mut sr = RECT { left: 0, top: 56, right: CARD_W, bottom: 80 };
-    DrawTextW(hdc, sub.as_ptr(), -1, &mut sr, DT_CENTER);
+    DrawTextW(hdc, sub_wide.as_ptr(), -1, &mut sr, DT_CENTER);
 
     SelectObject(hdc, old_bmp);
     DeleteDC(hdc);
