@@ -41,6 +41,10 @@ tauri_help.txt
 *.blend2
 *.blend[0-9]
 
+# Python
+__pycache__/
+*.pyc
+
 # Backup files
 *.bak
 *~

@@ -6,6 +6,7 @@ import { showToast, showConfirm } from './ui.js';
 import { saveActiveProject } from './projects.js';
 import { renderFileList } from './files.js';
 import { writeBridgeContext } from './bridge.js';
+import { isViewable3dName } from './preview3d.js';
 
 // ── EXPORTS MANAGEMENT (integrated into fbx folder view) ──
 function _fbxKey() {
@@ -95,6 +96,9 @@ function buildExportSection() {
         }
         html += '</div>';
         html += '<div class="exp-vactions">';
+        if ((ex.fileNames || []).some(isViewable3dName)) {
+          html += '<button class="exp-act" onclick="openPreview3dVersion(' + exIdx + ')" title="3D preview">View</button>';
+        }
         html += '<button class="exp-act" onclick="openExportForm(' + exIdx + ')" title="Edit version">Edit</button>';
         html += '<button class="exp-act danger" onclick="confirmDeleteExport(' + exIdx + ')" title="Delete version">Delete</button>';
         html += '</div>';

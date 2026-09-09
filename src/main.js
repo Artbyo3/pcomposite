@@ -13,6 +13,7 @@ import './modal.css';
 import './settings.css';
 import './exports.css';
 import './bases.css';
+import './preview3d.css';
 
 // ── DATA ──
 import { invoke } from '@tauri-apps/api/core';

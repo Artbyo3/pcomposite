@@ -9,6 +9,28 @@ async function getDataDir() {
   return await join(await appDataDir(), DIR);
 }
 
+async function _listProjectPaths() {
+  const list = [];
+  for (const pr of projects) {
+    if (!pr || !pr.id || !pr.name) continue;
+    list.push({ id: pr.id, name: pr.name, path: await join(globalSettings.root_path, pr.id + '_' + pr.name) });
+  }
+  // Dedupe and ensure the active project is first.
+  const seen = new Set();
+  const deduped = [];
+  for (const pr of list) {
+    const key = pr.path.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(pr);
+  }
+  const active = deduped.find(x => x.id === (projects.find(p => p.active) || {}).id);
+  if (active) {
+    return [active, ...deduped.filter(x => x !== active)];
+  }
+  return deduped;
+}
+
 async function scanBasesLibrary(vaultPath) {
   const basesDir = await join(vaultPath, '_bases');
   if (!(await exists(basesDir))) return { path: basesDir, groups: {} };
@@ -62,14 +84,10 @@ async function consumePendingExport() {
   if (!ctx?.pending_export) return;
   const pe = ctx.pending_export;
 
-  const exports = window._currentExports || [];
-  const nextVer = await getNextVersion(exports, pe.target);
-  if (pe.version !== nextVer) return;
-
   const nameToId = {};
   for (const [id, name] of Object.entries(baseIdMap)) nameToId[name] = id;
 
-  exports.push({
+  const newExport = {
     id: 'exp_' + Date.now().toString(36),
     base_id: nameToId[pe.target] || '',
     target: pe.target,
@@ -78,7 +96,39 @@ async function consumePendingExport() {
     note: '',
     isFinal: false,
     fileNames: [pe.file],
-  });
+  };
+
+  // The addon now writes the FBX into the project that owns the open .blend.
+  // If that differs from the currently active project, record the export under
+  // the owning project instead — otherwise it would show up in the wrong one
+  // and its file path would not resolve.
+  const active = projects.find(x => x.active);
+  if (pe.project_name && active && pe.project_id !== active.id) {
+    const owner = projects.find(x => x.name === pe.project_name && x.id === pe.project_id);
+    if (owner) {
+      const { loadProject, saveProject } = await import('./data.js');
+      try {
+        const data = await loadProject(globalSettings.root_path, owner.id, owner.name);
+        const list = (data && data.exports) || [];
+        list.push(newExport);
+        await saveProject(globalSettings.root_path, { ...(data || {}), exports: list });
+      } catch (e) {
+        console.warn('consumePendingExport: could not record under owning project', e);
+        return;
+      }
+      ctx.pending_export = null;
+      const dataDir = await getDataDir();
+      await writeTextFile(await join(dataDir, BRIDGE_FILE), JSON.stringify(ctx, null, 2));
+      return;
+    }
+  }
+
+  // Default path: record under the active project (version-gated to avoid dupes).
+  const exports = window._currentExports || [];
+  const nextVer = await getNextVersion(exports, pe.target);
+  if (pe.version !== nextVer) return;
+
+  exports.push(newExport);
   window._currentExports = exports;
 
   const { saveActiveProject } = await import('./projects.js');
@@ -107,6 +157,8 @@ export async function writeBridgeContext(pendingAction) {
     const { scanBaseIds } = await import('./data.js');
     const idMap = await scanBaseIds(globalSettings.root_path);
     setBaseIdMap(idMap);
+
+    const projectList = await _listProjectPaths();
     let exportsChanged = false;
     const nameToId = {};
     for (const [id, name] of Object.entries(idMap)) nameToId[name] = id;
@@ -174,10 +226,13 @@ export async function writeBridgeContext(pendingAction) {
     }));
 
     const context = {
-      version: 2,
+      version: 3,
       active_project_path: projectDir,
       active_project_id: p.id,
       active_project_name: p.name,
+      // Full list of projects so the addon can resolve the project that owns
+      // the currently open .blend, keeping exports inside that project.
+      projects: projectList,
       bases_path: basesPath,
       bases_library: basesLibrary,
       imported_bases: importedBases,

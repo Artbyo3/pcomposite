@@ -1,7 +1,7 @@
 bl_info = {
     "name": "PCOMPOSITE Bridge",
     "author": "PCOMPOSITE",
-    "version": (2, 2),
+    "version": (2, 3),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar > PCOMPOSITE",
     "description": "Import bridge for the PCOMPOSITE bases library",
@@ -40,6 +40,48 @@ def _context_path():
     if not data_dir:
         data_dir = _get_data_dir()
     return os.path.join(data_dir, BRIDGE_FILE)
+
+
+def _norm(path):
+    """Normalize a path for consistent comparison."""
+    if not path:
+        return ""
+    return os.path.normcase(os.path.realpath(path))
+
+
+def _project_for_blend(ctx):
+    """Resolve which project owns the currently open .blend file.
+
+    The .blend lives inside {vault}/{project_id}_{project_name}/[…]. We compare
+    against every known project root so exports always land in the project that
+    owns the open file — never in some other "active" project the way the bridge
+    was written when PCOMPOSITE last focused.
+    """
+    blend = getattr(bpy.context.blend_data, "filepath", None) or ""
+    blend_norm = _norm(blend)
+
+    projects = ctx.get("projects", []) or []
+    # The project that owns the open blend is the one whose folder is a prefix.
+    best = None
+    best_len = -1
+    for p in projects:
+        root = _norm(p.get("path", ""))
+        if not root:
+            continue
+        # Only treat as owner if the blend actually sits inside this project
+        # (with a path separator boundary so '{id}_a' doesn't match '{id}_ab').
+        if blend_norm.startswith(root + os.sep) and len(root) > best_len:
+            best = p
+            best_len = len(root)
+    if best:
+        return best, blend
+    # Legacy/fallback: only accept the active project if this blend actually
+    # lives inside it. Otherwise leave exports locked instead of guessing.
+    if blend_norm:
+        active = _norm(ctx.get("active_project_path", ""))
+        if active and blend_norm.startswith(active + os.sep):
+            return {"path": active, "name": ctx.get("active_project_name", ""), "id": ctx.get("active_project_id", "")}, blend
+    return None, blend
 
 
 def _load_context():
@@ -154,6 +196,23 @@ class PCOM_OT_export_tracked(Operator):
 
     def execute(self, context):
         ver = self.next_version or 1
+        ctx = _load_context() or {}
+
+        # Safety: resolve the project that owns the open .blend and refuse to
+        # write anywhere outside it. This prevents an FBX leaking into (or
+        # overwriting one in) the wrong project folder.
+        proj, _blend = _project_for_blend(ctx)
+        proj_path = proj.get("path", "") if proj else ""
+        allowed = _norm(os.path.join(proj_path, "fbx"))
+        target_path = _norm(self.export_path)
+        if not proj_path or not allowed or not target_path.startswith(allowed + os.sep):
+            self.report(
+                {"ERROR"},
+                "Export blocked: this file does not belong to a known project "
+                f"folder (target outside {proj_path or 'any project'}).",
+            )
+            return {"CANCELLED"}
+
         export_dir = os.path.dirname(self.export_path)
         os.makedirs(export_dir, exist_ok=True)
 
@@ -186,11 +245,16 @@ class PCOM_OT_export_tracked(Operator):
 
     def _write_pending_export(self):
         ctx = _load_context() or {}
+        proj, _blend = _project_for_blend(ctx)
         ctx["pending_export"] = {
             "target": self.target,
             "version": self.next_version,
             "date": date.today().isoformat(),
             "file": os.path.basename(self.export_path),
+            # Project that owns the open .blend (so PCOMPOSITE records the
+            # export under the right project, matching where the FBX landed).
+            "project_id": (proj or {}).get("id", ""),
+            "project_name": (proj or {}).get("name", ""),
         }
         # Bump local version so addon shows the correct next_version immediately
         targets = ctx.get("export_targets", [])
@@ -220,8 +284,22 @@ def _project_box(layout, ctx):
     col = box.column(align=True)
     row = col.row()
     row.label(text="", icon="FILE_FOLDER")
-    row.label(text=ctx.get("active_project_name", "—"))
-    col.label(text=ctx.get("active_project_id", ""), icon="DOT")
+    proj, _ = _project_for_blend(ctx)
+    if proj:
+        name = proj.get("name") or ctx.get("active_project_name", "—")
+        pid = proj.get("id") or ctx.get("active_project_id", "")
+        col.label(text=name)
+    else:
+        col.label(text="NO PROJECT — exports locked", icon="ERROR")
+        pid = ""
+    box2 = box.column(align=True)
+    row = box2.row()
+    row.alert = proj is None
+    row.scale_y = 0.7
+    lock_icon = "LOCKED" if proj else "ERROR"
+    row.label(text=f"Exports → {os.path.basename(proj.get('path','')) if proj else 'locked'}", icon=lock_icon)
+    if pid:
+        col.label(text=pid, icon="DOT")
 
 
 def _draw_pending(layout, ctx):
@@ -296,9 +374,21 @@ def _draw_import(layout, ctx):
 def _draw_export(layout, ctx):
     layout.label(text="Export FBX", icon="EXPORT")
     targets = ctx.get("export_targets", [])
-    proj_path = ctx.get("active_project_path", "")
-    proj_name = ctx.get("active_project_name", "")
     pattern = ctx.get("export_naming_pattern", "{target}_v{version}")
+
+    proj, _blend = _project_for_blend(ctx)
+    proj_path = proj.get("path", "") if proj else ""
+    proj_name = proj.get("name", "") if proj else ""
+
+    if not proj:
+        box = layout.box()
+        row = box.row()
+        row.alert = True
+        row.label(text="Blend not inside a known project", icon="ERROR")
+        row = box.row()
+        row.scale_y = 0.7
+        row.label(text="Exports are locked off.", icon="LOCKED")
+
     if targets:
         for t in targets:
             name = t.get("target", "")
@@ -310,14 +400,32 @@ def _draw_export(layout, ctx):
             box = layout.box()
             row = box.row()
             row.label(text=name.upper(), icon="GROUP")
+
+            if not proj:
+                row = box.row()
+                row.scale_y = 1.8
+                row.operator("pcom.noop", text=display_name + "  (locked)")
+                continue
+
             row = box.row()
-            row.scale_y = 0.6
+            row.scale_y = 1.8
             op = row.operator("pcom.export_tracked", text=display_name)
             op.export_path = full_path
             op.target = name
             op.next_version = ver
     else:
         layout.label(text="No targets available", icon="DOT")
+
+    if proj:
+        col = layout.column(align=True)
+        col.alert = True
+        col.scale_y = 0.75
+        col.label(text="", icon="LOCKED")
+        col.label(text=f"Exports locked to: {os.path.basename(proj_path)}")
+        col.label(text="Stays inside this project's FBX folder.")
+
+
+# ── Refresh Operator ──
 
 
 class PCOM_PT_main_panel(Panel):
@@ -358,11 +466,23 @@ class PCOM_PT_main_panel(Panel):
 
 # ── Registration ──
 
+
+class PCOM_OT_noop(Operator):
+    """Disabled placeholder used when exports are locked off."""
+    bl_idname = "pcom.noop"
+    bl_label = "Locked"
+    bl_options = {"INTERNAL"}
+
+    def execute(self, context):
+        return {"CANCELLED"}
+
+
 classes = [
     PCOM_AP_addon_preferences,
     PCOM_OT_reset_data_dir,
     PCOM_OT_import_base,
     PCOM_OT_export_tracked,
+    PCOM_OT_noop,
     PCOM_OT_refresh,
     PCOM_PT_main_panel,
 ]

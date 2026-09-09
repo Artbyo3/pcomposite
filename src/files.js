@@ -10,6 +10,7 @@ import { setVTab, showToast, refreshInfoPanel } from './ui.js';
 import { logAction } from './checklist.js';
 import { selectProject, saveActiveProject } from './projects.js';
 import { refreshFolders } from './folders.js';
+import { VIEWABLE_3D } from './preview3d.js';
 
 function renderFileList(filterKey) {
   const files  = filterKey ? ALL_FILES.filter(f => f.folder === filterKey) : ALL_FILES;
@@ -429,6 +430,11 @@ function showCtx(e, idx) {
       <span class="ctx-ico">${getAppIcon(f.app)}</span> Open in ${f.app}
     </div>
     <div class="ctx-sep"></div>
+    ${VIEWABLE_3D.includes((f.ext || '').toLowerCase()) ? `
+    <div class="ctx-item" onclick="openPreview3dIdx(${idx});removeCtx()">
+      <span class="ctx-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> 3D Preview
+    </div>
+    <div class="ctx-sep"></div>` : ''}
     <div class="ctx-item" onclick="revealFile(${idx});removeCtx()">
       <span class="ctx-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></span> Reveal in Explorer
     </div>
