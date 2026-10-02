@@ -2,7 +2,7 @@
 name = "temp_app"
 version = "0.1.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["Artbyo3"]
 edition = "2021"
 default-run = "temp_app"
 

@@ -2,6 +2,7 @@
   "name": "pcomposite",
   "private": true,
   "version": "0.1.0",
+  "author": "Artbyo3",
   "type": "module",
   "scripts": {
     "dev": "vite",

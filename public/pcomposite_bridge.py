@@ -1,6 +1,6 @@
 bl_info = {
     "name": "PCOMPOSITE Bridge",
-    "author": "PCOMPOSITE",
+    "author": "Artbyo3",
     "version": (2, 4),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar > PCOMPOSITE",
