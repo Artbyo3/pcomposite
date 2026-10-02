@@ -77,6 +77,7 @@ window.copyProjectPath = async function() {
 
 // ── CHANGELOG ──
 const CHANGELOG = [
+  { ver: 'v0.1.1', date: '', msg: 'Edit project title, Blender add-on v2.4 project resolution by ID & relocate operator, gallery date save & thumbnail fixes' },
   { ver: 'v0.0.3', date: '', msg: 'Fix: Prevent in-window drop from WebView2 handling' },
   { ver: 'v0.0.2', date: '', msg: 'Quick Export FBX button, imported bases tracking, addon UI tabs' },
   { ver: 'v0.0.1', date: '', msg: 'Initial addon bridge: OLE drag-drop, import/export tabs, bridge context' },
