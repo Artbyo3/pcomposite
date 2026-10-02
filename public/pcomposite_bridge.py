@@ -1,7 +1,7 @@
 bl_info = {
     "name": "PCOMPOSITE Bridge",
     "author": "PCOMPOSITE",
-    "version": (2, 3),
+    "version": (2, 4),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar > PCOMPOSITE",
     "description": "Import bridge for the PCOMPOSITE bases library",
@@ -75,12 +75,36 @@ def _project_for_blend(ctx):
             best_len = len(root)
     if best:
         return best, blend
+
+    # When a project's title is edited in PCOMPOSITE, the project folder on disk
+    # is renamed to {project_id}_{new_title}, but an already-opened blend in
+    # Blender still retains its original filepath containing {project_id}_{old_title}.
+    # We resolve by unique project ID so the addon continues pointing to that exact
+    # project, keeps exports inside the renamed project folder, and reflects updated info.
+    if blend_norm:
+        norm_parts = [part for part in blend_norm.replace("/", os.sep).split(os.sep) if part]
+        for p in projects:
+            pid = (p.get("id") or "").strip().lower()
+            if not pid:
+                continue
+            for seg in norm_parts:
+                seg_lower = seg.lower()
+                if seg_lower == pid or seg_lower.startswith(pid + "_"):
+                    return p, blend
+
     # Legacy/fallback: only accept the active project if this blend actually
     # lives inside it. Otherwise leave exports locked instead of guessing.
     if blend_norm:
         active = _norm(ctx.get("active_project_path", ""))
         if active and blend_norm.startswith(active + os.sep):
             return {"path": active, "name": ctx.get("active_project_name", ""), "id": ctx.get("active_project_id", "")}, blend
+        active_id = (ctx.get("active_project_id") or "").strip().lower()
+        if active_id:
+            norm_parts = [part for part in blend_norm.replace("/", os.sep).split(os.sep) if part]
+            for seg in norm_parts:
+                seg_lower = seg.lower()
+                if seg_lower == active_id or seg_lower.startswith(active_id + "_"):
+                    return {"path": active, "name": ctx.get("active_project_name", ""), "id": ctx.get("active_project_id", "")}, blend
     return None, blend
 
 
@@ -277,6 +301,42 @@ class PCOM_OT_refresh(Operator):
         return {"FINISHED"}
 
 
+# ── Relocate Blend Operator ──
+
+class PCOM_OT_relocate_blend(Operator):
+    bl_idname = "pcom.relocate_blend"
+    bl_label = "Update Blend Path"
+    bl_description = "Save current blend file into the renamed project folder so relative paths and saves stay in sync"
+
+    def execute(self, context):
+        ctx = _load_context() or {}
+        proj, blend = _project_for_blend(ctx)
+        if not proj or not blend:
+            self.report({"WARNING"}, "No project match found")
+            return {"CANCELLED"}
+        proj_root = proj.get("path", "")
+        pid = (proj.get("id") or "").strip().lower()
+        parts = blend.replace("/", os.sep).split(os.sep)
+        idx = -1
+        for i, seg in enumerate(parts):
+            if seg.lower() == pid or seg.lower().startswith(pid + "_"):
+                idx = i
+                break
+        if idx >= 0:
+            rel_parts = parts[idx + 1:]
+            new_blend_path = os.path.join(proj_root, *rel_parts)
+            try:
+                os.makedirs(os.path.dirname(new_blend_path), exist_ok=True)
+                bpy.ops.wm.save_as_mainfile(filepath=new_blend_path, copy=False)
+                self.report({"INFO"}, f"Blend path updated: {os.path.basename(new_blend_path)}")
+                return {"FINISHED"}
+            except Exception as e:
+                self.report({"ERROR"}, f"Failed to relocate blend: {e}")
+                return {"CANCELLED"}
+        self.report({"WARNING"}, "Could not determine relative blend path")
+        return {"CANCELLED"}
+
+
 # ── N-Panel UI ──
 
 def _project_box(layout, ctx):
@@ -284,7 +344,7 @@ def _project_box(layout, ctx):
     col = box.column(align=True)
     row = col.row()
     row.label(text="", icon="FILE_FOLDER")
-    proj, _ = _project_for_blend(ctx)
+    proj, blend = _project_for_blend(ctx)
     if proj:
         name = proj.get("name") or ctx.get("active_project_name", "—")
         pid = proj.get("id") or ctx.get("active_project_id", "")
@@ -300,6 +360,19 @@ def _project_box(layout, ctx):
     row.label(text=f"Exports → {os.path.basename(proj.get('path','')) if proj else 'locked'}", icon=lock_icon)
     if pid:
         col.label(text=pid, icon="DOT")
+
+    # If the blend file path still points to the old renamed folder, offer one-click relocation
+    if proj and blend:
+        root = _norm(proj.get("path", ""))
+        blend_norm = _norm(blend)
+        if root and not blend_norm.startswith(root + os.sep):
+            alert_box = box.box()
+            alert_col = alert_box.column(align=True)
+            alert_col.alert = True
+            alert_col.label(text="Project was renamed", icon="INFO")
+            alert_row = alert_col.row()
+            alert_row.scale_y = 1.2
+            alert_row.operator("pcom.relocate_blend", text="Update Blend Filepath", icon="FILE_REFRESH")
 
 
 def _draw_pending(layout, ctx):
@@ -482,6 +555,7 @@ classes = [
     PCOM_OT_reset_data_dir,
     PCOM_OT_import_base,
     PCOM_OT_export_tracked,
+    PCOM_OT_relocate_blend,
     PCOM_OT_noop,
     PCOM_OT_refresh,
     PCOM_PT_main_panel,
