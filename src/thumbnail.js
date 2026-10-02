@@ -1,7 +1,8 @@
-import { projects, thumbTargetIdx, setThumbTargetIdx } from './state.js';
+import { projects, thumbTargetIdx, setThumbTargetIdx, globalSettings } from './state.js';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { renderProjects, saveActiveProject } from './projects.js';
+import { loadProject, saveProject } from './data.js';
 import { renderGallery } from './gallery.js';
 import { showToast } from './ui.js';
 
@@ -30,12 +31,24 @@ async function pickImage() {
     for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode(...u8.subarray(i, i + 8192));
     const b64 = btoa(bin);
     const dataUrl = `data:${mime};base64,${b64}`;
-    projects[thumbTargetIdx].thumb = dataUrl;
+    const targetP = projects[thumbTargetIdx];
+    if (!targetP) return;
+    targetP.thumb = dataUrl;
     renderProjects();
     updateHeaderThumb();
-    if (document.getElementById('galleryOverlay').style.display !== 'none') renderGallery();
-    try { await saveActiveProject(); }
-    catch (err) { console.error('Failed to save thumb:', err); }
+    const galOv = document.getElementById('galleryOverlay');
+    if (galOv && galOv.classList.contains('open')) renderGallery();
+    try {
+      if (targetP.active) {
+        await saveActiveProject();
+      } else if (globalSettings.root_path) {
+        const pData = await loadProject(globalSettings.root_path, targetP.id, targetP.name, targetP.folder_name);
+        if (pData) {
+          pData.thumb = dataUrl;
+          await saveProject(globalSettings.root_path, pData, targetP.folder_name);
+        }
+      }
+    } catch (err) { console.error('Failed to save thumb:', err); }
     setThumbTargetIdx(null);
   } catch (err) {
     if (err?.toString?.().includes('cancelled') || err?.toString?.().includes('Cancel')) return;

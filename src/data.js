@@ -38,12 +38,12 @@ export async function saveSettings(s) {
 
 // ── Projects (vault directory) ──
 
-function projectDir(vaultPath, id, name) {
-  return join(vaultPath, id + '_' + name);
+function projectDir(vaultPath, id, name, folderName) {
+  return join(vaultPath, folderName || (id + '_' + name));
 }
 
-function projectFilePath(vaultPath, id, name) {
-  return join(vaultPath, id + '_' + name, 'project.json');
+function projectFilePath(vaultPath, id, name, folderName) {
+  return join(vaultPath, folderName || (id + '_' + name), 'project.json');
 }
 
 export async function scanVault(vaultPath) {
@@ -63,23 +63,27 @@ export async function scanVault(vaultPath) {
         stage: data.stage || 1,
         thumb: data.thumb || null,
         release_date: data.release_date || null,
+        folder_name: entry.name,
       });
     } catch (e) { console.warn('scanVault: failed to parse project.json in', entry.name, e); }
   }
   return results;
 }
 
-export async function loadProject(vaultPath, id, name) {
-  const p = await projectFilePath(vaultPath, id, name);
+export async function loadProject(vaultPath, id, name, folderName) {
+  let p = await projectFilePath(vaultPath, id, name, folderName);
+  if (!(await exists(p)) && folderName) {
+    p = await projectFilePath(vaultPath, id, name);
+  }
   if (!(await exists(p))) return null;
   try { return JSON.parse(await readTextFile(p)); }
   catch (e) { console.warn('loadProject: failed to parse', p, e); return null; }
 }
 
-export async function saveProject(vaultPath, project) {
-  const dir = await projectDir(vaultPath, project.id, project.name);
+export async function saveProject(vaultPath, project, folderName) {
+  const dir = await projectDir(vaultPath, project.id, project.name, folderName || project.folder_name);
   if (!(await exists(dir))) await mkdir(dir, { recursive: true });
-  const p = await projectFilePath(vaultPath, project.id, project.name);
+  const p = await projectFilePath(vaultPath, project.id, project.name, folderName || project.folder_name);
   await writeTextFile(p, JSON.stringify(project, null, 2));
 }
 
@@ -115,8 +119,11 @@ function _appForFolder(folder) {
   return 'Explorer';
 }
 
-export async function syncProjectFiles(vaultPath, id, name) {
-  const dir = await projectDir(vaultPath, id, name);
+export async function syncProjectFiles(vaultPath, id, name, folderName) {
+  let dir = await projectDir(vaultPath, id, name, folderName);
+  if (!(await exists(dir)) && folderName) {
+    dir = await projectDir(vaultPath, id, name);
+  }
   if (!(await exists(dir))) return [];
   const entries = await readDir(dir);
   const results = [];

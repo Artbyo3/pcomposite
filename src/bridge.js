@@ -13,7 +13,8 @@ async function _listProjectPaths() {
   const list = [];
   for (const pr of projects) {
     if (!pr || !pr.id || !pr.name) continue;
-    list.push({ id: pr.id, name: pr.name, path: await join(globalSettings.root_path, pr.id + '_' + pr.name) });
+    const folder = pr.folder_name || (pr.id + '_' + pr.name);
+    list.push({ id: pr.id, name: pr.name, path: await join(globalSettings.root_path, folder) });
   }
   // Dedupe and ensure the active project is first.
   const seen = new Set();
@@ -103,15 +104,15 @@ async function consumePendingExport() {
   // the owning project instead — otherwise it would show up in the wrong one
   // and its file path would not resolve.
   const active = projects.find(x => x.active);
-  if (pe.project_name && active && pe.project_id !== active.id) {
-    const owner = projects.find(x => x.name === pe.project_name && x.id === pe.project_id);
+  if (pe.project_id && active && pe.project_id !== active.id) {
+    const owner = projects.find(x => x.id === pe.project_id);
     if (owner) {
       const { loadProject, saveProject } = await import('./data.js');
       try {
-        const data = await loadProject(globalSettings.root_path, owner.id, owner.name);
+        const data = await loadProject(globalSettings.root_path, owner.id, owner.name, owner.folder_name);
         const list = (data && data.exports) || [];
         list.push(newExport);
-        await saveProject(globalSettings.root_path, { ...(data || {}), exports: list });
+        await saveProject(globalSettings.root_path, { ...(data || {}), exports: list }, owner.folder_name);
       } catch (e) {
         console.warn('consumePendingExport: could not record under owning project', e);
         return;
@@ -148,7 +149,8 @@ export async function writeBridgeContext(pendingAction) {
     const p = projects.find(x => x.active);
     if (!p || !globalSettings.root_path) return;
 
-    const projectDir = await join(globalSettings.root_path, p.id + '_' + p.name);
+    const folder = p.folder_name || (p.id + '_' + p.name);
+    const projectDir = await join(globalSettings.root_path, folder);
     const { path: basesPath, groups: basesLibrary } = await scanBasesLibrary(globalSettings.root_path);
     const importedBases = (window._importedBases || []).slice();
     const exports = window._currentExports || [];

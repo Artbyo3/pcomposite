@@ -1,9 +1,9 @@
 import { projects, ALL_FILES, sessionNote, globalSettings, galCalView, setGalCalView, galCalYear, setGalCalYear, galCalMonth, setGalCalMonth, galCalDay, setGalCalDay, _galCalDateTarget, setGalCalDateTarget, galleryFilter, setGalleryFilter as setGalleryFilterState, galleryView, setGalleryView as setGalleryViewState } from './state.js';
 import { escapeHTML, getDateStr, sanitizeProjectId, getPipelineLength, getStageLabel, getStageColor, renderStageDots } from './helpers.js';
 import { MONTH_NAMES, DAY_NAMES_SHORT } from './constants.js';
-import { saveProject } from './data.js';
+import { saveProject, loadProject } from './data.js';
 import { showToast } from './ui.js';
-import { selectProject } from './projects.js';
+import { selectProject, saveActiveProject } from './projects.js';
 
 // Hidden date picker for setting release dates from calendar
 const _calDateInput = document.createElement('input');
@@ -383,18 +383,21 @@ function galCalSetReleaseFor(idx, dateStr) {
   showToast(`Release set to ${dateStr} for ${p.name}`, 'var(--green)');
 }
 
-function saveReleaseDate(p) {
-  if (!globalSettings.root_path) return;
-  const data = {
-    id: p.id, name: p.name, date: p.date, stage: p.stage, thumb: p.thumb,
-    release_date: p.release_date || null,
-    files: ALL_FILES.map(f => ({ name: f.name, folder: f.folder, ext: f.ext, size_bytes: f.sizeBytes, app: f.app, created_at: f.date })),
-    checklist: (window._currentChecklist || []).map(c => ({ label: c.name, done: c.done })),
-    note: sessionNote,
-    exports: window._currentExports || [],
-    imported_bases: window._importedBases || [],
-  };
-  saveProject(globalSettings.root_path, data);
+async function saveReleaseDate(p) {
+  if (!globalSettings.root_path || !p) return;
+  if (p.active) {
+    await saveActiveProject();
+  } else {
+    try {
+      const data = await loadProject(globalSettings.root_path, p.id, p.name, p.folder_name);
+      if (data) {
+        data.release_date = p.release_date || null;
+        await saveProject(globalSettings.root_path, data, p.folder_name);
+      }
+    } catch (e) {
+      console.warn('saveReleaseDate error:', e);
+    }
+  }
 }
 
 function triggerDatePicker(projectIdx) {

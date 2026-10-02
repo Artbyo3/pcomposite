@@ -18,6 +18,7 @@ import './preview3d.css';
 // ── DATA ──
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { join } from '@tauri-apps/api/path';
 import { initDataStore } from './data.js';
 
 import { projects, globalSettings } from './state.js';
@@ -57,15 +58,19 @@ async function initData() {
 window.addEventListener('DOMContentLoaded', initData);
 
 // ── REVEAL PROJECT ROOT ──
-window.revealProjectRoot = function() {
+window.revealProjectRoot = async function() {
   const p = projects.find(x => x.active);
   if (!p || !globalSettings.root_path) return;
-  invoke('open_in_app', { exePath: 'explorer', filePath: globalSettings.root_path + '\\' + p.id + '_' + p.name });
+  const folder = p.folder_name || (p.id + '_' + p.name);
+  const dirPath = await join(globalSettings.root_path, folder);
+  invoke('open_in_app', { exePath: 'explorer', filePath: dirPath });
 };
-window.copyProjectPath = function() {
+window.copyProjectPath = async function() {
   const p = projects.find(x => x.active);
   if (!p || !globalSettings.root_path) return;
-  navigator.clipboard.writeText(globalSettings.root_path + '\\' + p.id + '_' + p.name);
+  const folder = p.folder_name || (p.id + '_' + p.name);
+  const dirPath = await join(globalSettings.root_path, folder);
+  navigator.clipboard.writeText(dirPath);
   showToast('Project path copied', 'var(--green)');
 };
 
