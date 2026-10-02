@@ -153,7 +153,8 @@ window.createFile = async function(folderKey) {
   const tool = getToolByFolderKey(folderKey);
   if (!tool) { showToast('No tool for this folder', 'var(--red)'); return; }
 
-  const projectDir = await join(globalSettings.root_path, p.id + '_' + p.name);
+  const folder = p.folder_name || (p.id + '_' + p.name);
+  const projectDir = await join(globalSettings.root_path, folder);
   const targetDir  = await join(projectDir, tool.folder_key);
   if (!(await exists(targetDir))) await mkdir(targetDir, { recursive: true });
 
@@ -203,9 +204,10 @@ async function openFile(idx) {
   if (!globalSettings.root_path) { showToast('No Root Path set in Settings', 'var(--red)'); return; }
   const p = projects.find(x => x.active);
   if (!p) return;
+  const folder = p.folder_name || (p.id + '_' + p.name);
   const targetPath = f.subfolder
-    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
-    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+    ? await join(globalSettings.root_path, folder, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, folder, f.folder, f.name);
 
   if (f.app === 'Viewer') {
     const ext = f.ext ? f.ext.toLowerCase() : '';
@@ -259,9 +261,10 @@ async function _filePath(f) {
   if (!globalSettings.root_path) return '';
   const p = projects.find(x => x.active);
   if (!p) return '';
+  const folder = p.folder_name || (p.id + '_' + p.name);
   return f.subfolder
-    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
-    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+    ? await join(globalSettings.root_path, folder, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, folder, f.folder, f.name);
 }
 
 let _fileDrag = null;
@@ -345,9 +348,10 @@ async function revealFile(idx) {
   if (!globalSettings.root_path) { showToast('No root path set', 'var(--red)'); return; }
   const p = projects.find(x => x.active);
   if (!p) return;
+  const folder = p.folder_name || (p.id + '_' + p.name);
   const targetPath = f.subfolder
-    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
-    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+    ? await join(globalSettings.root_path, folder, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, folder, f.folder, f.name);
   try {
     await invoke('open_in_app', { exePath: 'explorer', filePath: '/select,' + targetPath });
     logAction(`Revealed ${f.name} in Explorer`, 'info');
@@ -361,9 +365,10 @@ async function copyPath(idx) {
   if (!globalSettings.root_path) { showToast('No root path set', 'var(--red)'); return; }
   const p = projects.find(x => x.active);
   if (!p) return;
+  const folder = p.folder_name || (p.id + '_' + p.name);
   const targetPath = f.subfolder
-    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
-    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+    ? await join(globalSettings.root_path, folder, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, folder, f.folder, f.name);
   try {
     await navigator.clipboard.writeText(targetPath);
     showToast('Path copied to clipboard', 'var(--green)');

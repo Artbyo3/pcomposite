@@ -378,9 +378,10 @@ export async function openPreview3dIdx(idx) {
   if (!f || !globalSettings.root_path) return;
   const p = projects.find(x => x.active);
   if (!p) return;
+  const folder = p.folder_name || (p.id + '_' + p.name);
   const path = f.subfolder
-    ? await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.subfolder, f.name)
-    : await join(globalSettings.root_path, p.id + '_' + p.name, f.folder, f.name);
+    ? await join(globalSettings.root_path, folder, f.folder, f.subfolder, f.name)
+    : await join(globalSettings.root_path, folder, f.folder, f.name);
   openPreview3d(path, f.name);
 }
 

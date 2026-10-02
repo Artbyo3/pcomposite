@@ -77,10 +77,13 @@
           </div>
           <div>
             <div class="ph-id" id="phId">—</div>
-            <div class="ph-name" id="phName">Select a project</div>
+            <div class="ph-name" id="phName" onclick="openEditProjectModal()" title="Click to edit project title" style="cursor:pointer">Select a project</div>
           </div>
         </div>
         <div class="phacts">
+          <div class="ibtn" title="Edit project title" onclick="openEditProjectModal()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
           <div class="ibtn" title="Reveal project folder" onclick="revealProjectRoot()">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
           </div>
@@ -191,6 +194,10 @@
       </div>
       <div class="agroup">
         <div class="agt">Project</div>
+        <button class="abtn" onclick="openEditProjectModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit Project Title
+        </button>
         <button class="abtn danger" onclick="showToast('Delete not yet implemented','var(--red)')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
           Delete Project
@@ -268,6 +275,30 @@
     <div class="mfoot">
       <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="createProject()">Create Project + Folders</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PROJECT MODAL -->
+<div class="overlay" id="editProjectOverlay" onclick="closeEditProjectOvOut(event)">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle">Edit Project Title</div>
+      <div class="mclose" onclick="closeEditProjectModal()">✕</div>
+    </div>
+    <div class="modal-bd">
+      <div class="fg">
+        <label class="fl">Project Title</label>
+        <input class="fi" type="text" placeholder="Project Title" id="editProjectName" onkeydown="if(event.key==='Enter')saveEditProject()" />
+      </div>
+      <div class="fg">
+        <label class="fl">Project ID</label>
+        <input class="fi" type="text" id="editProjectId" readonly style="opacity:0.6;cursor:not-allowed;" />
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-secondary" onclick="closeEditProjectModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditProject()">Save Changes</button>
     </div>
   </div>
 </div>

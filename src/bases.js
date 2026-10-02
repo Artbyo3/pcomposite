@@ -468,7 +468,8 @@ async function importBase(group, fileName) {
 
   const basesDirPath = await basesDir();
   const srcPath = await join(basesDirPath, group, fileName);
-  const projectDir = await join(globalSettings.root_path, p.id + '_' + p.name);
+  const folder = p.folder_name || (p.id + '_' + p.name);
+  const projectDir = await join(globalSettings.root_path, folder);
   const targetDir = await join(projectDir, 'blender');
   if (!(await exists(targetDir))) await mkdir(targetDir, { recursive: true });
   const destPath = await join(targetDir, fileName);

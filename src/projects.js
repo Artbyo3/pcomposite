@@ -1,4 +1,5 @@
 import { join } from '@tauri-apps/api/path';
+import { exists, rename, mkdir } from '@tauri-apps/plugin-fs';
 import { escapeHTML, formatBytes, sanitizeProjectId, isStreamerMode, getFolderMeta, getPipelineLength, getStageIcon, getStageColor, renderStageDots } from './helpers.js';
 import { ALL_FILES, projects, setProjects, sessionNote, setSessionNote, setProjectLog, globalSettings, setCurrentFolder, currentFolder, currentSort, activeFilters } from './state.js';
 import { loadProject, saveProject, syncProjectFiles, scanVault } from './data.js';
@@ -26,7 +27,8 @@ async function saveActiveProject() {
     exports: window._currentExports || [],
     imported_bases: window._importedBases || [],
   };
-  await saveProject(globalSettings.root_path, data);
+  const folder = p.folder_name || (p.id + '_' + p.name);
+  await saveProject(globalSettings.root_path, data, folder);
 }
 
 async function loadProjects() {
@@ -92,19 +94,20 @@ async function selectProject(i) {
   setSessionNote('');
 
   try {
-    const data = await loadProject(globalSettings.root_path, p.id, p.name);
-    let projectDir = globalSettings.root_path ? await join(globalSettings.root_path, p.id + '_' + p.name) : '';
+    const folder = p.folder_name || (p.id + '_' + p.name);
+    const data = await loadProject(globalSettings.root_path, p.id, p.name, folder);
+    let projectDir = globalSettings.root_path ? await join(globalSettings.root_path, folder) : '';
     if (projectDir) projectDir = projectDir.replace(/\\/g, '/');
 
     // Sync files from disk (source of truth) and merge with project.json metadata
-    const diskFiles = globalSettings.root_path ? await syncProjectFiles(globalSettings.root_path, p.id, p.name) : [];
+    const diskFiles = globalSettings.root_path ? await syncProjectFiles(globalSettings.root_path, p.id, p.name, folder) : [];
     const jsonFiles = (data && data.files) || [];
     const missingKeys = await applyFileSync(projectDir, diskFiles, jsonFiles);
 
     // Prune JSON entries that no longer exist on disk (deleted outside the app)
     if (missingKeys.size && data) {
       data.files = jsonFiles.filter(f => !missingKeys.has(f.folder + '/' + f.name));
-      try { await saveProject(globalSettings.root_path, data); }
+      try { await saveProject(globalSettings.root_path, data, folder); }
       catch (e) { console.warn('Could not prune deleted files from project data', e); }
     }
 
@@ -188,17 +191,18 @@ async function resyncActiveProject() {
   const p = projects.find(x => x.active);
   if (!p || !globalSettings.root_path) return;
   try {
-    let projectDir = globalSettings.root_path ? await join(globalSettings.root_path, p.id + '_' + p.name) : '';
+    const folder = p.folder_name || (p.id + '_' + p.name);
+    let projectDir = globalSettings.root_path ? await join(globalSettings.root_path, folder) : '';
     if (projectDir) projectDir = projectDir.replace(/\\/g, '/');
 
-    const data = await loadProject(globalSettings.root_path, p.id, p.name);
-    const diskFiles = await syncProjectFiles(globalSettings.root_path, p.id, p.name);
+    const data = await loadProject(globalSettings.root_path, p.id, p.name, folder);
+    const diskFiles = await syncProjectFiles(globalSettings.root_path, p.id, p.name, folder);
     const jsonFiles = (data && data.files) || [];
     const missingKeys = await applyFileSync(projectDir, diskFiles, jsonFiles);
 
     if (missingKeys.size && data) {
       data.files = jsonFiles.filter(f => !missingKeys.has(f.folder + '/' + f.name));
-      try { await saveProject(globalSettings.root_path, data); }
+      try { await saveProject(globalSettings.root_path, data, folder); }
       catch (e) { console.warn('Could not prune deleted files from project data', e); }
     }
 
@@ -213,4 +217,106 @@ async function resyncActiveProject() {
   } catch (e) { console.error('resyncActiveProject error:', e); }
 }
 
-export { loadProjects, renderProjects, selectProject, saveActiveProject, resyncActiveProject };
+async function editProjectTitle(newTitle, projectIdx) {
+  const idx = (projectIdx != null && projectIdx >= 0) ? projectIdx : projects.findIndex(x => x.active);
+  if (idx === -1 || !projects[idx]) {
+    showToast('No project selected to edit', 'var(--red)');
+    return false;
+  }
+  const p = projects[idx];
+  const trimmed = (newTitle || '').trim();
+  if (!trimmed) {
+    showToast('Project title cannot be empty', 'var(--red)');
+    return false;
+  }
+  if (/[<>:"/\\|?*]/.test(trimmed)) {
+    showToast('Title contains invalid characters (< > : " / \\ | ? *)', 'var(--red)');
+    return false;
+  }
+  if (trimmed === p.name) {
+    return true;
+  }
+  if (!globalSettings.root_path) {
+    showToast('Set Root Path in settings first', 'var(--orange)');
+    return false;
+  }
+
+  const oldName = p.name;
+  const oldFolderName = p.folder_name || (p.id + '_' + oldName);
+  const newFolderName = p.id + '_' + trimmed;
+  const oldDir = await join(globalSettings.root_path, oldFolderName);
+  const newDir = await join(globalSettings.root_path, newFolderName);
+
+  if (oldFolderName.toLowerCase() !== newFolderName.toLowerCase()) {
+    if (await exists(newDir)) {
+      showToast('A project folder with that title already exists', 'var(--orange)');
+      return false;
+    }
+  }
+
+  if (p.active) {
+    try { await saveActiveProject(); } catch (e) { console.warn('Pre-rename save failed', e); }
+  }
+
+  const oldDirExists = await exists(oldDir);
+  if (oldDirExists) {
+    try {
+      await rename(oldDir, newDir);
+    } catch (e) {
+      console.error('Rename project folder failed:', e);
+      showToast('Could not rename project folder on disk (file may be in use): ' + (e.message || e), 'var(--red)');
+      return false;
+    }
+  } else {
+    try {
+      await mkdir(newDir, { recursive: true });
+    } catch (e) {
+      showToast('Could not create project folder on disk: ' + (e.message || e), 'var(--red)');
+      return false;
+    }
+  }
+
+  p.name = trimmed;
+  p.folder_name = newFolderName;
+
+  try {
+    const data = await loadProject(globalSettings.root_path, p.id, trimmed, newFolderName);
+    if (data) {
+      data.name = trimmed;
+      await saveProject(globalSettings.root_path, data, newFolderName);
+    }
+  } catch (e) {
+    console.warn('Could not update project.json title:', e);
+  }
+
+  if (p.active) {
+    const normNewDir = newDir.replace(/\\/g, '/');
+    ALL_FILES.forEach(f => {
+      f._path = normNewDir + '/' + f.folder + '/' + (f.subfolder ? f.subfolder + '/' : '') + f.name;
+    });
+
+    const rootLabel = globalSettings.root_path ? (isStreamerMode() ? 'Vault' : globalSettings.root_path.split(/[/\\]/).pop()) : '3D_Assets';
+    const safeId = sanitizeProjectId(p.id, 'Project');
+    const phName = document.getElementById('phName');
+    const crumb = document.getElementById('crumb');
+    const phPath = document.getElementById('phPath');
+    if (phName) phName.textContent = p.name;
+    if (crumb) crumb.innerHTML = '<b>' + safeId + '</b> <span style="color:var(--text3)">/ ' + escapeHTML(p.name) + '</span>';
+    if (phPath) phPath.innerHTML = `<span class="seg">${escapeHTML(rootLabel)}</span><span style="color:var(--text3)">›</span><span class="seg" style="color:var(--accent)">${safeId} — ${escapeHTML(p.name)}</span>`;
+  }
+
+  await writeBridgeContext();
+  renderProjects();
+
+  const galOv = document.getElementById('galleryOverlay');
+  if (galOv && galOv.classList.contains('open')) {
+    const { renderGallery } = await import('./gallery.js');
+    renderGallery();
+  }
+
+  logAction(`Project "${oldName}" renamed to "${trimmed}"`, 'ok');
+  showToast(`Project renamed to "${trimmed}"`, 'var(--green)');
+  return true;
+}
+
+export { loadProjects, renderProjects, selectProject, saveActiveProject, resyncActiveProject, editProjectTitle };

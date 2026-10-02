@@ -1,4 +1,4 @@
-import { formatBytes, getToolFolders, getPipelineLength, getStageLabel, getStageColor, getStageIcon, getToolByFolderKey } from './helpers.js';
+import { formatBytes, getToolFolders, getPipelineLength, getStageLabel, getStageColor, getStageIcon, getToolByFolderKey, sanitizeProjectId } from './helpers.js';
 import { ALL_FILES, projects, globalSettings, setCurrentSort, activeFilters, currentFolder } from './state.js';
 import { join, basename, extname } from '@tauri-apps/api/path';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
@@ -278,7 +278,8 @@ async function handleDroppedFiles(paths) {
   const p = projects.find(x => x.active);
   if (!p) { showToast('No active project', 'var(--red)'); return; }
 
-  const data = await loadProject(globalSettings.root_path, p.id, p.name);
+  const folder = p.folder_name || (p.id + '_' + p.name);
+  const data = await loadProject(globalSettings.root_path, p.id, p.name, folder);
   if (!data) return;
 
   // Flatten: expand directories into their file contents
@@ -305,7 +306,7 @@ async function handleDroppedFiles(paths) {
 
       const destFolder = destFolderForExt(lowerExt);
 
-      const projectDir = await join(globalSettings.root_path, p.id + '_' + p.name);
+      const projectDir = await join(globalSettings.root_path, folder);
       const targetDir  = await join(projectDir, destFolder);
       if (!(await exists(targetDir))) await mkdir(targetDir, { recursive: true });
 
@@ -340,10 +341,10 @@ async function handleDroppedFiles(paths) {
   }
 
   if (imported > 0) {
-    await saveProject(globalSettings.root_path, data);
+    await saveProject(globalSettings.root_path, data, folder);
     logAction(`Imported ${imported} file(s)`, 'ok');
     showToast(`Imported ${imported} file(s)`, 'var(--green)');
-    selectProject(projects.findIndex(x => x.active));
+    await selectProject(projects.findIndex(x => x.active));
   }
 }
 
@@ -382,4 +383,63 @@ function destFolderForExt(lowerExt) {
   return findFolder(t => t.folder_key === 'export' || t.name === 'Export', 'export');
 }
 
-export { showToast, showConfirm, showPrompt, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop }
+// ── EDIT PROJECT MODAL ──
+let _editingProjectIdx = -1;
+
+function openEditProjectModal(projectIdx) {
+  const idx = projectIdx != null && projectIdx >= 0 ? projectIdx : projects.findIndex(p => p.active);
+  if (idx === -1 || !projects[idx]) {
+    showToast('Select a project first', 'var(--orange)');
+    return;
+  }
+  _editingProjectIdx = idx;
+  const p = projects[idx];
+  const overlay = document.getElementById('editProjectOverlay');
+  const nameInput = document.getElementById('editProjectName');
+  const idInput = document.getElementById('editProjectId');
+  if (nameInput) {
+    nameInput.value = p.name;
+    nameInput.style.borderColor = '';
+  }
+  if (idInput) {
+    idInput.value = sanitizeProjectId(p.id, 'Project');
+  }
+  if (overlay) {
+    overlay.classList.add('open');
+    setTimeout(() => {
+      if (nameInput) {
+        nameInput.focus();
+        nameInput.select();
+      }
+    }, 150);
+  }
+}
+
+function closeEditProjectModal() {
+  const overlay = document.getElementById('editProjectOverlay');
+  if (overlay) overlay.classList.remove('open');
+  _editingProjectIdx = -1;
+}
+
+function closeEditProjectOvOut(e) {
+  if (e.target === document.getElementById('editProjectOverlay')) {
+    closeEditProjectModal();
+  }
+}
+
+async function saveEditProject() {
+  const input = document.getElementById('editProjectName');
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) {
+    input.style.borderColor = 'var(--red)';
+    return;
+  }
+  const { editProjectTitle } = await import('./projects.js');
+  const success = await editProjectTitle(newName, _editingProjectIdx);
+  if (success) {
+    closeEditProjectModal();
+  }
+}
+
+export { showToast, showConfirm, showPrompt, openModal, closeModal, closeOvOut, toggleFci, createProject, openEditProjectModal, closeEditProjectModal, closeEditProjectOvOut, saveEditProject, setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop }

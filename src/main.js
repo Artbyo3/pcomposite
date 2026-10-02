@@ -27,7 +27,7 @@ import { loadSettings, openSettings, closeSettings, pickSettingPath } from './se
 import { renderPipeline, setPipe } from './pipeline.js';
 import { refreshFolders, renderFolders, drillFolder } from './folders.js';
 import { saveSessionNote, renderChecklist, toggleCk, logAction, renderLog } from './checklist.js';
-import { loadProjects, renderProjects, selectProject, saveActiveProject, resyncActiveProject } from './projects.js';
+import { loadProjects, renderProjects, selectProject, saveActiveProject, resyncActiveProject, editProjectTitle } from './projects.js';
 import { renderFileList, setFileView as setFileViewFn, goBackFolders,
   openFile, openImageViewer, closeImageViewer, revealFile, copyPath, deleteFile,
   showCtx, removeCtx } from './files.js';
@@ -37,8 +37,9 @@ import { openGallery, closeGallery, setGalleryFilter, setGalleryView, renderGall
   triggerDatePicker, openFromGallery } from './gallery.js';
 import { openBases, closeBases, renderBases, importBase, createGroup, importInBlender, removeBaseFile, removeGroup, addFilesToDetail } from './bases.js';
 import { triggerThumb, triggerActiveThumb, updateHeaderThumb } from './thumbnail.js';
-import { showToast, openModal, closeModal, closeOvOut, toggleFci, createProject, setVTab, setPTab,
-  setSort, toggleFilter, refreshInfoPanel, initDragDrop } from './ui.js';
+import { showToast, openModal, closeModal, closeOvOut, toggleFci, createProject,
+  openEditProjectModal, closeEditProjectModal, closeEditProjectOvOut, saveEditProject,
+  setVTab, setPTab, setSort, toggleFilter, refreshInfoPanel, initDragDrop } from './ui.js';
 
 // ── INIT ──
 async function initData() {
@@ -106,7 +107,7 @@ document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'n') { e.preventDefault(); openModal(); }
 });
 document.addEventListener('click', removeCtx);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { removeCtx(); closeModal(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { removeCtx(); closeModal(); closeEditProjectModal(); } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeGallery(); } });
 
 // ── RESYNC ON FOCUS ──
@@ -132,6 +133,7 @@ Object.assign(window, {
   renderProjects, selectProject, refreshInfoPanel,
   setVTab, setPTab, setSort, toggleFilter,
   openModal, closeModal, closeOvOut, toggleFci, createProject,
+  openEditProjectModal, closeEditProjectModal, closeEditProjectOvOut, saveEditProject, editProjectTitle,
   openGallery, closeGallery, setGalleryFilter, setGalleryView, renderGallery, openFromGallery,
   renderGalleryCalendar, galCalPrev, galCalNext, galCalToday, galCalSetView, galCalGoMonth, galCalSetRelease, triggerDatePicker,
   openBases, closeBases, importBase, createGroup, importInBlender, removeBaseFile, removeGroup, addFilesToDetail,
